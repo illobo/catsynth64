@@ -27,6 +27,18 @@
 .weak
 WEB      = 0              ; the web edition (make web): the ten techno songs
                           ; built in, in the slots at start (slots.asm)
+; sound choices, each 1 = on (build with -D NAME=0 for the other, to compare
+; by ear; ab/CHANGES.md):
+LVROUND  = 1              ; Level / Cat Size scale the sustain rounded, never
+                          ; to 0 (sfx.asm srlvl)
+MEOWFIT  = 1              ; a meow the next one cuts short sings a flatter
+                          ; Bend, so it ends near its note (seq.asm bcap)
+HR2      = 0              ; the hard restart 2 frames, the note's SR written
+                          ; after its gate-on (the ADSR delay bug; sfx.asm)
+LEGATO   = 0              ; a bass slide over a note still sounding glides
+                          ; from its pitch, no restart (seq.asm legato)
+ECHOBAR  = 0              ; one SID, a lone meow in its bar: only the echoes
+                          ; that end before it comes round again (0: both)
 .endweak
 frame    = $02
 cdark    = $21
@@ -103,6 +115,7 @@ K_SPACE  = 7*8+4
 K_Q      = 7*8+6
 K_STOP   = 7*8+7
 K_ARROW  = 7*8+1          ; <- : live play mode
+K_W      = 1*8+1
 
 ; A = pressed this frame? (Z clear when yes)
 pressed .macro key
@@ -154,7 +167,17 @@ start   sei
         lda #$26                ; degree 5, a meow
         sta lastv+2
         jsr pal_detect
-        jsr sid_detect
+        lda ntsc                ; NTSC: the pitch tables for its clock (the
+        beq +                   ; PAL ones play 0.65 semitone sharp there)
+        ldx #0
+-       .for i = 0, i < 380, i += 190
+        lda ftntsc + i,x
+        sta ftl + i,x
+        .next
+        inx
+        cpx #190
+        bne -
++       jsr sid_detect
         jsr sid_init
         jsr sid2_init           ; [sid2] a second SID? (sid2.asm)
         lda #0
@@ -162,12 +185,16 @@ start   sei
         lda #1
         sta running
         jsr title_run           ; the title, the band playing (title_tick)
-        jsr sfx_stop            ; the main screen: the ten song slots, slot 1
-        jsr slots_init          ; (dancehall) open (slots.asm)
+        jsr sfx_stop            ; the main screen: the ten song slots, the
+        lda cstyle              ; style that was playing open (slots.asm;
+        jsr slots_init          ; the web edition: slot 1)
         jsr screen_init         ; then the main screen
         jsr ui_init             ; its panel in the UI font (ui.asm); IRQs on
         lda #$ff
         sta lstep
+        ldx #<msg_start         ; (the first 3 seconds: where the help is)
+        ldy #>msg_start
+        jsr message
 
 ; ------------------------------------------------------------------ main loop
 loop    lda #$fa                ; once a frame, in the lower border (line 250)
@@ -178,9 +205,9 @@ loop    lda #$fa                ; once a frame, in the lower border (line 250)
         jsr pulse_frame         ; the border's beat pulse (ui.asm)
         jsr poses
         jsr screen_frame
+        jsr input               ; (the keys' own work first: infos then
+        jsr audition_tick       ; sees what time is left, roomy)
         jsr infos
-        jsr input
-        jsr audition_tick
         inc frame
 -       lda $d012               ; (off line 250 first: not twice a frame)
         cmp #$fa
@@ -190,15 +217,38 @@ loop    lda #$fa                ; once a frame, in the lower border (line 250)
 ; the title's frame: the band plays (title_run draws the screen itself)
 title_tick
         jsr music
-        lda bar                 ; attract mode: every 16 bars the next style
-        cmp attbar
-        beq +
+        ldx #7                  ; 1-0: that style now (the keyboard read as
+-       lda colmask,x           ; input does, the new presses into knew)
+        sta $dc00
+        lda $dc01
+        eor #$ff
+        tay
+        eor kprev,x
+        sta knew,x
+        tya
+        and knew,x
+        sta knew,x
+        tya
+        sta kprev,x
+        dex
+        bpl -
+        lda #$ff
+        sta $dc00
+        jsr digit
+        bcs +
+        cpx #NSTYLES
+        bcc attstyle
++       lda bar                 ; attract mode: when the song's chain comes
+        cmp attbar              ; round (bar 0 again) after 8 bars at least,
+        beq att9                ; the next style
         sta attbar
         jsr stage_cycle         ; (and the lights change colour each bar)
-        dec attbars
-        bne +
-        lda #16
-        sta attbars
+        inc attn
+        lda bar
+        bne att9
+        lda attn
+        cmp #9                  ; (8 played: this is the 9th bar seen)
+        bcc att9
         ldx cstyle              ; the next style, round
         inx
         cpx #NSTYLES
@@ -210,9 +260,13 @@ attstyle  txa
         pla
         tax
         jsr seq_load            ; (not newstyle: the title owns the screen)
-+       jmp poses
+        lda #0
+        sta attn
+        lda #$ff
+        sta attbar
+att9    jmp poses
 attbar    .byte $ff             ; the bar seen last
-attbars   .byte 16              ; bars to go with this style
+attn      .byte 0               ; bars seen with this style
 
 ; the sequencer and the sound, once a PAL frame: on NTSC (60 Hz) every
 ; sixth frame is skipped, so songs and meows keep their PAL speed
@@ -300,15 +354,26 @@ kscan   lda colmask,x           ; column X pulled low: its rows on $dc01
         dex
         bpl -
         jmp dispatch
-+       ldx #7
++       lda #0
+        sta kany
+        ldx #7
 -       lda kbd,x               ; pressed now: held and not last frame
         eor kprev,x
         and kbd,x
         sta knew,x
+        ora kany
+        sta kany
         lda kbd,x
         sta kprev,x
         dex
         bpl -
+        jsr krepeat             ; (a cursor / value key held: repeats)
+        lda kany                ; no key went down (most frames): only the
+        bne dispatch            ; joystick, unless the help or the disk
+        lda helpon              ; page is up (they take the joystick too)
+        ora diskon
+        bne dispatch
+        jmp joy_edit
 
 dispatch
         lda helpon              ; help up: any key or fire closes it
@@ -318,9 +383,13 @@ dispatch
         beq +                   ; the joystick is the pointer everywhere
         jsr joy_edit
         jmp dkeys
-+       #pressed K_STOP         ; RUN/STOP: the help overlay
-        beq +
-        jmp help_open
++       #pressed K_STOP         ; RUN/STOP: the help overlay (in live play
+        beq +                   ; only held alone: kalone)
+        lda pmode
+        beq kdhelp
+        jsr kalone
+        bne +
+kdhelp  jmp help_open
 +       jsr keys_mute
         lda pmode
         beq +
@@ -333,6 +402,80 @@ dispatch
         jmp keys_tweak
 +       jsr keys_edit
         jmp joy_edit
+
+; Z set when at most one key is held (the SHIFTs not counted): a key that
+; came with two others may be a ghost of them (no diodes in the matrix)
+kalone  ldx #7
+        ldy #0                  ; (Y: keys held)
+-       lda kbd,x
+        cpx #1
+        bne +
+        and #$7f                ; (left SHIFT)
++       cpx #6
+        bne +
+        and #$ef                ; (right SHIFT)
++       beq ++
+-       asl a                   ; count its bits
+        bcc +
+        iny
++       bne -                   ; (A 0: none left)
++       dex
+        bpl --
+        cpy #2
+        bcc +
+        lda #1                  ; (Z clear: more than one)
+        rts
++       lda #0
+        rts
+; key repeat: the last repeatable key pressed (CRSR, Q / A, + -, , .), held
+; KRDELAY frames, comes again every KRRATE frames (into knew, kany)
+KRDELAY  = 20
+KRRATE   = 4
+krepeat lda pmode               ; (not in live play: Q and A are pads)
+        bne kroff
+        lda kany
+        beq kr2
+        ldx #len(KRCOL)-1       ; a new press: one of the repeatable keys?
+-       ldy krcol,x
+        lda knew,y
+        and krbit,x
+        bne +
+        dex
+        bpl -
+        lda #$ff                ; (no: nothing repeats)
+        sta krk
+        rts
++       stx krk
+        lda #0
+        sta krn
+        rts
+kr2     ldx krk                 ; none new: the one held still?
+        bmi kr9
+        ldy krcol,x
+        lda kbd,y
+        and krbit,x
+        beq kroff
+        inc krn
+        lda krn
+        cmp #KRDELAY
+        bcc kr9
+        sbc #KRRATE             ; (every KRRATE frames after the delay)
+        sta krn
+        lda krbit,x
+        sta knew,y
+        sta kany
+kr9     rts
+kroff   lda #$ff
+        sta krk
+        rts
+KRCOL   = [K_CRSRLR >> 3, K_CRSRUD >> 3, K_Q >> 3, K_A >> 3, K_PLUS >> 3, K_MINUS >> 3, K_COMMA >> 3, K_PERIOD >> 3]
+krcol   .byte KRCOL
+krbit   .byte 1 << (K_CRSRLR & 7), 1 << (K_CRSRUD & 7), 1 << (K_Q & 7), 1 << (K_A & 7)
+        .byte 1 << (K_PLUS & 7), 1 << (K_MINUS & 7), 1 << (K_COMMA & 7), 1 << (K_PERIOD & 7)
+krk     .byte $ff               ; the key repeating (index), $ff none
+krn     .byte 0                 ; frames it is held
+kany    .byte 0                 ; input: any knew bit this frame
+kwold   .byte 0                 ; W: the swing before
 
 ; $dc00 for keyboard column 0-7: that line low
 colmask .byte $fe, $fd, $fb, $f7, $ef, $df, $bf, $7f
@@ -376,8 +519,12 @@ shifted #held K_LSHIFT
 ; play / stop, tempo, echo, chain, transposes, mode, harmony, live play,
 ; the disk page
 keys_play
-        #held K_CTRL            ; (CTRL + 1-3: a mute, keys_mute)
-        bne +
+        jsr kslots
+        jmp kpspace
+
+; 1-0 (the slots), SHIFT+1-0 (new sounds): keys_play's, and live play's
+kslots  #held K_CTRL            ; (CTRL + 1-3: a mute, keys_mute)
+        bne kp9
         jsr digit               ; 1-0: a song slot; SHIFT: a style's sounds;
         bcs +                   ; the style list up: a style (slots.asm)
         cpx #NSLOTS             ; (the ten digits: all slots)
@@ -388,17 +535,25 @@ keys_play
         jsr shifted
         bne kpstyle
         lda kpdig
-        jsr slot_select
-        jmp +
+        jmp slot_select
 kpstyle lda spick
         beq kpst2
         jsr tweak_close
 kpst2   lda kpdig
-        jsr style_select
-+       #pressed K_SPACE
+        jmp style_select
++
+kp9     rts
+
+; SPACE play / stop (SHIFT+SPACE: pause / go on, as the play button)
+kspace  #pressed K_SPACE
+        beq kp9
+        jsr shifted
         beq +
-        jsr startstop
-+       #pressed K_PLUS         ; (tempo: frames a step, 4-15: + is fewer)
+        jmp b_play
++       jmp startstop
+
+; + - the tempo (frames a step, 4-15: + is fewer)
+ktempo  #pressed K_PLUS
         beq +
         lda tempo
         cmp #5
@@ -412,7 +567,31 @@ kpst2   lda kpdig
         bcs +
         inc tempo
         jsr retempo
-+       #pressed K_E            ; echo: off, 2, 3, 4, 6, 8 steps
++       rts
+
+kpspace jsr kspace
+        jsr ktempo
+        #pressed K_W            ; W: the swing up (to its cap, then 0);
+        beq kpw9                ; SHIFT+W down
+        jsr shifted
+        bne +
+        lda swing
+        sta kwold
+        clc
+        adc #1
+        jsr setswing
+        lda swing               ; (at the cap it stays: round to 0)
+        cmp kwold
+        bne kpw9
+        lda #0
+        jsr setswing
+        jmp kpw9
++       lda swing
+        beq kpw9
+        sec
+        sbc #1
+        jsr setswing
+kpw9    #pressed K_E            ; echo: off, 2, 3, 4, 6, 8 steps
         beq kp2
         ldx #0                  ; find the setting now; take the next
 -       lda echos,x
@@ -437,9 +616,9 @@ kp2     #pressed K_C            ; the next song chain
         jsr nextchain
 +       #pressed K_COMMA        ; , . the singer's transpose; < > the bass's
         beq ++
-        lda #$ff
         jsr shifted
         bne +
+        lda #$ff                ; (after shifted: it leaves A 0)
         jsr transpose
         jmp ++
 +       lda #$ff
@@ -477,13 +656,9 @@ ECHOS    = [0, 2, 3, 4, 6, 8]
 echos   .byte ECHOS             ; E's echo delays, in steps
 
 ; tempo changed: into the song (song+1), the swing kept under it
-retempo lda swing               ; the swing stays under the tempo
-        cmp tempo
-        bcc +
-        lda tempo               ; (C set: - 1)
-        sbc #1
-        jsr setswing
-+       lda tempo
+retempo lda swing               ; the swing stays under the tempo (setswing
+        jsr setswing            ; caps it at tempo - 3)
+        lda tempo
         sta song+1
         jsr seq_retempo
         lda #$80
@@ -583,6 +758,8 @@ joy_edit
         bcc +
         ldx #4
 +       stx jsp
+        jsr jcell               ; over the matrix: a cell a push (C set: done)
+        bcs jmoved
         lsr jdir                ; up
         bcc +
         lda my
@@ -611,7 +788,8 @@ joy_edit
         sta mx
         bcc +
         inc mx+1
-+       jsr mclamp
++
+jmoved  jsr mclamp
         lda #1
         sta mseen
         jsr mhover
@@ -644,6 +822,80 @@ jclr    lda #0
         sta jfr
         sta fused
 +       rts
+; the joystick over the matrix (no page over it): the pointer jumps a cell
+; a push, to the cell's middle (a step is 16 pixels, a row 8), and on held,
+; after 16 frames, a cell every 4: pixel steps were slow for 16 x 8 cells.
+; C set when it did (or waits for the next repeat); clear: move as usual
+jc0     clc
+        rts
+jc9     sec
+        rts
+jcell   lda tweakon
+        ora diskon
+        ora helpon
+        bne jc0
+        lda my                  ; rows 15-21: y 120-175
+        cmp #MROW*8
+        bcc jc0
+        cmp #(MROW+NROWS)*8
+        bcs jc0
+        lda mx+1                ; columns 7-38: x 56-311
+        bne +
+        lda mx
+        cmp #MCOL*8
+        bcc jc0
++       lda jheld               ; (1: the push's first frame)
+        cmp #1
+        beq jc2
+        cmp #16
+        bcc jc9
+        lda frame
+        and #3
+        bne jc9
+jc2     lsr jdir                ; up
+        bcc +
+        lda my
+        sbc #8                  ; (C set)
+        sta my
++       lsr jdir                ; down
+        bcc +
+        lda my
+        adc #8-1                ; (C set: + 8)
+        sta my
++       lsr jdir                ; left
+        bcc +
+        lda mx
+        sbc #16
+        sta mx
+        bcs +
+        dec mx+1
++       lsr jdir                ; right
+        bcc +
+        lda mx
+        adc #16-1
+        sta mx
+        bcc +
+        inc mx+1
++       lda my                  ; to the middle of the cell
+        and #$f8
+        ora #4
+        sta my
+        lda mx                  ; x: 56 + 16 * step + 8
+        sec
+        sbc #MCOL*8
+        tax
+        lda mx+1
+        sbc #0
+        sta mx+1
+        txa
+        and #$f0
+        clc
+        adc #MCOL*8+8
+        sta mx
+        bcc +
+        inc mx+1
++       sec
+        rts
 jheld   .byte 0                 ; frames a direction is held (to 40)
 jdir    .byte 0                 ; the directions, shifted out
 jsp     .byte 0                 ; pixels a frame
@@ -674,6 +926,7 @@ sfx_stop
         bpl -
         lda #0
         sta echo_n
+        sta cdark               ; (a mono echo cut short: no darkness left)
         rts
 
 ; A = style: its preset song into the open slot (the tests; the slots
@@ -750,11 +1003,34 @@ toggle  jsr cell
 value   sta tmp
         jsr cell
         lda (ep),y
-        bne +
-        ldx cury
-        lda lastv,x
+        bne vfull
+        ldx cury                ; an empty step: the cursor row's note (the
+        dex                     ; one you see it on), with the last length /
+        bmi vdnew               ; kind; drums: the last sound
+        bne vsnew
+        lda crow                ; bass
+        jsr brownote
+        sta tmp2
+        lda lastv+1
+        and #$60
+        ora tmp2
+        sta (ep),y
+        and #$7f
+        sta lastv+1
+        jmp vset
+vsnew   lda crow                ; singer
+        jsr srowdeg
+        sta tmp2
+        lda lastv+2
+        and #$60
+        ora tmp2
+        sta (ep),y
+        sta lastv+2
+        jmp vset
+vdnew   lda lastv
         sta (ep),y
         jmp vset
+vfull
 +       ldx cury
         beq vdrum
         dex
@@ -805,11 +1081,9 @@ vset0   jmp moved
 inscale lda tmp2
         clc
         adc #11                 ; pitch class relative to the root (note 13)
--       cmp #12
-        bcc +
-        sbc #12
-        bcs -
-+       tax                     ; in the scale of the moment (the smode's)
+        tax
+        lda mod12,x
+        tax                     ; in the scale of the moment (the smode's)
         cpx #8                  ; (smask: bits 0-7, then smask+1 bits 0-3)
         bcs +
         lda smask
@@ -1060,11 +1334,10 @@ nextmode
         asl a
         ora cstyle
         sta song
-        jsr loadscale           ; smask, the bass notes the panel shows
-        jsr ui_rescale
-        lda #$80
-        sta dirty
-        jmp status
+        jsr loadscale           ; smask (the music's now); the bass notes
+        lda #1                  ; the panel shows and row 24 come in their
+        sta rescp               ; own frame (infos: ui_rescale, status)
+        rts
 
 ; song+3 = esteps (low nibble) and the transpose (high)
 store3  lda transp
@@ -1094,22 +1367,26 @@ NPADS    = 29
 
 ; the live play keys (pmode on): see above
 keys_live
-        #pressed K_ARROW
+        jsr kalone              ; (three pads at once can read as a phantom
+        beq +                   ; key on the C64's matrix: SPACE, <-,
+        jmp klpads              ; RETURN, DEL only when held alone)
++       #pressed K_ARROW
         beq +
         lda #0
         sta pmode
         sta rec
+        sta undook              ; (live play left: no undo any more)
         jmp status
-+       #pressed K_SPACE
-        beq +
-        jsr startstop
-+       #pressed K_RETURN
++       jsr kspace              ; (as on the matrix: play / stop, pause, the
+        jsr kslots              ; slots and new sounds on the bar line, the
+        jsr ktempo              ; tempo; none of them a pad)
+        #pressed K_RETURN
         beq +
         jsr rectog
 +       #pressed K_DEL
-        beq +
+        beq klpads
         jsr undo
-+       #pressed K_CRSRLR       ; CRSR right / left: the bass's transpose
+klpads  #pressed K_CRSRLR       ; CRSR right / left: the bass's transpose
         beq ++
         jsr shifted
         beq +
@@ -1269,16 +1546,28 @@ rectog  lda rec
         eor #1
         sta rec
         beq +
-        ldx #191                ; the 4 slots' 192 step bytes
+        jsr usnap
++       jmp status
+
+; the patterns now, for undo (the 4 slots' 192 step bytes); undo is valid
+usnap   ldx #191
 -       lda song+21,x
         sta undobuf,x
         dex
         cpx #$ff
         bne -
-+       jmp status
+        lda #1
+        sta undook
+        rts
 
-; DEL in live play: the patterns as they were when REC went on
-undo    ldx #191
+; DEL in live play: the patterns as they were when REC went on (only a
+; snapshot of this song: none, or one from another song, is no undo)
+undo    lda undook
+        bne +
+        ldx #<msg_noundo
+        ldy #>msg_noundo
+        jmp message
++       ldx #191
 -       lda undobuf,x
         sta song+21,x
         dex
@@ -1287,6 +1576,7 @@ undo    ldx #191
         lda #$80
         sta dirty
         rts
+undook  .byte 0                 ; 1: undobuf holds this song's patterns
 
 ; live play: the grids show the bar playing
 follow  lda pmode
@@ -1307,6 +1597,9 @@ undobuf .fill 192               ; the patterns at REC on (rectog)
 ; the messages (ui.asm message: X/Y, a 0-terminated text in screen codes)
         .enc "screen"
 msg_loaded .null "Loaded"
+msg_noundo .null "Nothing to undo"
+msg_start  .null "RUN/STOP: help     <-: live play"
+msg_off    .null "Switch called off"
 msg_nslot  .text "Next bar: slot "
 msg_nslotn .null "1"
 msg_nstyle .null "New sounds at the next bar"
@@ -1405,18 +1698,22 @@ fxhi    .byte 0                 ; sfx_play is not used
         .include "seq.asm"
         .include "sid2.asm"     ; [sid2]
         .include "screen.asm"
-        .include "title.asm"
+title_area                      ; (the title: start-up only, then the song
+        .include "title.asm"    ; slots' memory, below)
+title_end
         .include "../gen/styles.inc"
         .include "disk.asm"
         .include "ui.asm"
         .include "slots.asm"
         .include "diskui.asm"   ; (last: its buffers follow it, not loaded)
 
-; the song slots: past the program and the disk page's buffers, not loaded
-        .virtual dend
+; the song slots: over the title's code and pictures, which are done with
+; when the slots fill (start: title_run, then slots_init); nothing of the
+; title runs again
+        .virtual title_area
 slotmem .fill NSLOTS * SLOTLEN
 slotend
         .endv
-        .cerror slotend > $c000, "the song slots must stay below the screen"
+        .cerror slotend > title_end, "the song slots must fit in the title's room"
 
         .cerror * > $c000, "program runs into the screen at $c000"

@@ -1,7 +1,7 @@
 ========================================================================
                      C A T S Y N T H   6 4
                          USER'S GUIDE
-              version 1.0, (c) 2026 illobo/netmilk
+              version 1.2, (c) 2026 illobo/netmilk
 ========================================================================
 
 CONTENTS
@@ -82,12 +82,15 @@ THE TITLE SCREEN
 The band plays on stage under the CATSYNTH 64 sign while a message
 scrolls along the bottom of the screen. Every so often the bottom half
 shows a card with the most important keys. If you leave the title
-screen alone, the band plays all ten styles in turn, so you can listen
-to them all.
+screen alone, the band plays all ten styles in turn, each one through
+its song, so you can listen to them all. Press a number key to hear
+that style now.
 
-Press FIRE, SPACE or RETURN to go on stage. On stage the band plays
-song slot 1, the dancehall song (Chapter 4 tells you about the ten
-song slots).
+Press FIRE, SPACE or RETURN to go on stage. On stage the band plays on
+with the style you were listening to, in its own song slot (Chapter 4
+tells you about the ten song slots); at first that is slot 1, the
+dancehall song. For three seconds the settings line reminds you:
+"RUN/STOP: help   <-: live play".
 
 THE MOUSE
 
@@ -103,7 +106,8 @@ THE JOYSTICK
 
 The joystick in port 2 works exactly like the mouse: it moves the same
 pointer. Push it and the pointer moves, slowly at first and faster the
-longer you hold it. FIRE is the left mouse button: the click happens
+longer you hold it. Over the matrix it jumps a whole cell for each push
+(and on, a cell at a time, while you hold it), so you can't miss one. FIRE is the left mouse button: the click happens
 when you let go. Hold FIRE for half a second and it is the right
 button. Everything this guide says about clicks works with the
 joystick, too. While you hold the joystick, the keyboard is not read.
@@ -222,6 +226,12 @@ Every lesson works with the keyboard, the mouse or the joystick. Use
 whichever you like; you can mix them as you go. Remember that FIRE is
 a left click and FIRE held is a right click.
 
+In the browser version the number keys hold the ten techno songs, not
+the styles' songs these lessons use. To follow along, press S, click
+New, then Defaults (or SHIFT+D), and Yes: the ten styles'
+songs come back. The browser has no disk drive, so the disk page says
+so; New still works.
+
 LESSON 1: CHOOSE A STYLE
 
 CATSYNTH 64 keeps ten songs at once, one on each number key, and at
@@ -318,19 +328,25 @@ it.
 
 LESSON 6: THE DUB ECHO
 
-Every meow comes back as an echo, a little darker and quieter. Grey
-marks in the singer's matrix show where the echoes land.
+A meow can come back as an echo, once or twice, a little darker and
+quieter each time. Grey marks in the singer's matrix show where the
+echoes land.
 
 Press E to change how far apart the echoes are, from 2 to 8 steps, or
 switch them off. With the mouse, click along the "Echo" slider at the
 left of the singer's settings line: off, 2, 3, 4, 6 and 8 steps.
 
 With a second SID chip (Chapter 1) the echoes get a voice of their
-own and keep ringing while the singer goes on with the next meow; with
-one SID they sound between her meows.
+own and keep ringing while the singer goes on with the next meow:
+every meow echoes. With one SID the singer has to sing her echoes
+herself, between her meows, so an echo only comes when there is room
+for it: when the echo is farther away than the meow is long (a long
+OOH needs a long echo, a short MEW a short one), and when it ends
+before her next meow. The grey marks show only the echoes she will
+sing.
 
-    TRY THIS: set the echo to 3 and put two meows a bar apart. Now
-    you have a real dub song!
+    TRY THIS: set the echo to 6 and put two meows a bar apart. Now
+    you have a real dub song! Then try a MEW with the echo on 3.
 
 LESSON 7: FASTER, SLOWER, STOP
 
@@ -339,11 +355,24 @@ to the tempo. The tempo shows in beats per minute.
 
 SPACE stops the band and starts it again from the top. The play button
 is a pause button: it stops the band where it is and goes on from
-there. The stop button always goes back to the top.
+there (SHIFT+SPACE does the same). The stop button always goes back to
+the top.
 
-    TRY THIS: open the Drums tab and click along the "Swing" slider.
-    The off-beat steps come later and later, and the beat starts to
-    roll.
+    TRY THIS: open the Drums tab and click along the "Swing" slider,
+    or press W (SHIFT+W goes back). The off-beat steps come later and
+    later, and the beat starts to roll. The swing stops where the
+    short steps would get too short to play a note.
+
+LESSON 8: KEEP IT
+
+Your song lives in the computer's memory until you switch it off. To
+keep it, put it on the disk: press S for the disk page, type a name,
+and press SHIFT+RETURN (or click Save). "Saved" says it is on the disk.
+Next time, press S, click your song in the list and press RETURN (or
+click Load). Chapter 7 tells you more.
+
+The browser version has no disk drive: there your song lasts as long
+as the page is open.
 
 That's it, your first song! In the next chapters you will make it
 longer, change its key and play it live.
@@ -428,10 +457,12 @@ NEW SOUNDS FOR A SONG
 Hold SHIFT and press a number key, and the open song gets the sounds
 of that style: its drum kit, its bass sound, its key (the root note)
 and its scale, and the style's harmony. Your bars, the chain, the
-tempo and the settings pages stay as they are. The bass line moves to
-the new key and the meows fit themselves to the new scale, so the
-song keeps its shape in a new dress. While the band plays, this too
-waits for the end of the bar ("New sounds at the next bar").
+tempo and the settings pages stay as they are. The meows fit
+themselves to the new scale, and the bass line moves to the new key,
+each of its notes that is off the new scale moved to the nearest one
+in it, so the song keeps its shape in a new dress. While the band plays, this too waits for the end of the bar
+("New sounds at the next bar"); press the open slot's number to call
+it off ("Switch called off").
 
 THE STYLE LIST. Right-click the name at the bottom left, and the
 style list covers the matrix: the ten styles in two columns, from
@@ -482,7 +513,10 @@ HARMONY (WITH A SECOND SID)
 Press H, or click "Harm" on the singer's settings line, and a second
 singer joins in, a third or a fifth above the first. Do it again to
 change it, and once more to switch it off. Harmony needs a second SID
-chip; without one the setting shows "--".
+chip; without one the setting shows "--". The harmony counts in the
+song's scale, so its third is the scale's third above each meow; in
+the pentatonic styles (five notes) the fifth is three notes up, which
+lands on a fifth more often than not.
 
 The harmony is not kept with a song: opening a slot, loading a song
 or giving a song new sounds (SHIFT and a number key) brings back the
@@ -571,18 +605,20 @@ the same size as the singer.
 
 THE DRUMS PAGE
 
-  SIDECHAIN  0 (off) to 8. Every kick (BD or BM) makes the bass duck:
-             it gets quieter and thinner, then swells back over about
-             half a beat. The higher the number, the deeper the duck.
-             (The bass cat does it by narrowing his pulse wave.) The
-             page reminds you: "Each kick ducks the bass".
+  SIDECHAIN  0 (off) to 8. Every kick makes the bass duck: BD and
+             BM, and CP and DR too, which have a kick in them. The
+             bass gets quieter and thinner, then swells back over
+             about half a beat. The higher the number, the deeper the
+             duck. (The bass cat does it by narrowing his pulse wave,
+             so with the bass's Wave set to Saw or Tri there is no
+             duck.) The page reminds you: "Each kick ducks the bass".
   TUNE       the whole kit lower or higher, from -8 (half the pitch)
              to +8 (one and a half times); 0 is as made.
 
 On the right is one box:
 
   [ ] BEAT PULSE  off at first. Tick it and every kick, boom, snare,
-                  bap and clap lights the screen's border for a moment
+                  bap, clap and drop lights the screen's border for a moment
                   in that sound's colour on the matrix, then it fades
                   back. It is not saved with the songs.
 
@@ -604,7 +640,9 @@ THE BASS PAGE
            plays on the third voice of the second SID, so it needs a
            second SID; without one the page says "Delay: on SID 2".
   WAVE     Style (the style's own sound), Pulse, Saw or Tri. Saw and
-           Tri sound quieter on the low notes.
+           Tri sound quieter on the low notes, and they have no pulse
+           to narrow: the Sidechain's duck and Level's thinner pulse
+           work on the pulse wave only.
 
 On the right are three boxes:
 
@@ -690,9 +728,9 @@ loads into it and saves from it.
 TO OPEN THE DISK PAGE: press S or L, or click the small floppy disk at
 the right end of the frame under the matrix. The page covers the
 panel, and the band keeps playing while you look around. The drive
-reads the disk's directory at once, just like LOAD"$",8 would: for a
-moment the screen goes blank and the music pauses while the drive
-works, then the page shows
+reads the disk's directory at once, just like LOAD"$",8 would:
+"Reading..." shows for a moment, then the screen goes blank and the
+music pauses while the drive works, then the page shows
 
   * the disk's name and ID at the top,
   * its files, six at a time: the blocks each one takes, its "NAME"
@@ -718,41 +756,57 @@ Then click a button on the line below the page, or press its key:
   New     (light blue)  (click it)     new songs in the slots
 
 TO LOAD: the song goes into the open slot, in place of the one that
-was there (save that one first if you want to keep it). The page
-closes, the song plays from the top, the settings line says "Loaded",
-and the slot takes the file's name on the bottom line.
+was there. If you changed that one since it was last loaded, saved or
+made, the page asks first: "Not saved! Load over it?  Yes  No" (No,
+then Save, keeps it). The page closes, the song plays from the top,
+the settings line says "Loaded", and the slot takes the file's name
+on the bottom line.
 
 TO SAVE: the open slot's song is saved, and the slot takes the name.
 If the name is new, the song shows up in the list and the page says
 "Saved". If a file of that name is on the disk already, the page asks
-first:
+first (also when the list doesn't show it: the drive itself is asked):
 
         Overwrite NAME?  Yes  No
 
-Click Yes or press Y to replace it; No or N keeps the old one.
+Click Yes or press Y to replace it; No or N keeps the old one. The new
+song is saved first as CS64 TMP, and only when that worked is the old
+file deleted and the new one renamed: a full disk leaves your old song
+as it was. A file that is not a song (the program, or one of another
+type) is never overwritten: "Not a song there: another name".
 
 TO DELETE: the page asks "Delete NAME?  Yes  No" in the same way, then
-says "Deleted".
+says "Deleted" ("File not found" if there was no such file). A file
+that is not a song asks "Not a song! Delete NAME?".
+
+Names with * ? , = : $ @ or / in them, or with odd characters
+(graphics, shifted letters, control codes; a name you clicked in the
+list can have them) are refused for Save and Delete: to the drive they
+are patterns or commands that could reach other files.
 
 NEW SONGS. Click New, at the right after Back, and the page asks
 
         New:  This slot  All slots  Defaults  No
 
-  This slot  (T)   a new, empty song in the open slot, in its style:
-                   the style's tempo, sounds and settings as the band
-                   made them, a chain of one bar A and not a step on
-                   it. The slot gets the style's name again.
-  All slots  (A)   the same for all ten slots, each in the style of
-                   the song it holds
-  Defaults   (D)   the ten styles' songs back in all ten slots, as
-                   when you switched on
-  No         (N)   nothing changes (so does RUN/STOP)
+  This slot  (SHIFT+T)   a new, empty song in the open slot, in its
+                         style: the style's tempo, sounds and settings
+                         as the band made them, a chain of one bar A
+                         and not a step on it. The slot gets the
+                         style's name again.
+  All slots  (SHIFT+A)   the same for all ten slots, each in the style
+                         of the song it holds
+  Defaults   (SHIFT+D)   the ten styles' songs back in all ten slots,
+                         as when you switched on
+  No         (N)         nothing changes (so does RUN/STOP, and a
+                         click anywhere else: No sits under the New
+                         button, so a second click there is a no)
 
-Then the page closes and the open slot starts from the top (playing
-on if the band was playing), with a message: "A new song in this
-slot", "Ten new songs" or "The ten styles' songs are back". Songs you
-have not saved are gone, so think twice before All slots and
-Defaults.
+The letters need SHIFT, because plain T, A and D are letters for the
+Name field. All slots and Defaults ask once more: "Replace all ten
+songs?  Yes  No". Then the page closes and the open slot starts from
+the top (playing on if the band was playing), with a message: "A new
+song in this slot", "Ten new songs" or "The ten styles' songs are
+back". Songs you have not saved are gone.
 
 If anything goes wrong, the bottom line of the page tells you what
 (Appendix D).
@@ -819,7 +873,9 @@ EDITING
   SHIFT+1-9, 0    the open song gets that style's sounds: kit, bass,
                   key, scale (playing: at the end of the bar)
   SPACE           play / stop (from the top)
+  SHIFT+SPACE     pause / go on from there
   + -             faster / slower
+  W               swing up (at the top: back to 0); SHIFT+W down
   C= (Commodore)  open the next cat's tab
   CTRL+1 2 3      mute / unmute the drums, bass, meows
   CRSR            move the cursor (SHIFT: left, up); past the top or
@@ -829,7 +885,8 @@ EDITING
   SHIFT+RETURN    the cell's right job: drums: the row's right sound;
                   bass: a sliding note (on one: its length 1-4);
                   singer: on a meow: the next kind
-  Q  A            value up / down: drum sound, note, meow pitch
+  Q  A            value up / down: drum sound, note, meow pitch (on
+                  an empty step: a note on the cursor's row)
   K               bass length 1-4, meow kind
   G               bass slide on / off
   F1 F3 F5 F7     edit bar A B C D
@@ -845,6 +902,8 @@ EDITING
   T               the open cat's settings page (and back)
   RUN/STOP        help card (any key or click closes it)
   <- (left arrow) live play
+
+  Held down, CRSR, Q A, + -, and , . repeat (also on the pages).
 
 SETTINGS PAGES
 
@@ -877,7 +936,7 @@ DISK PAGE
   F7              Delete
   F1              Dir: read the directory again
   Y  N            Yes / No when the page asks
-  T  A  D  N      after New: This slot, All slots, Defaults, No
+  SHIFT+T A D, N  after New: This slot, All slots, Defaults, No
   RUN/STOP        back to the panel (when the page asks: No)
 
 LIVE PLAY
@@ -886,11 +945,18 @@ LIVE PLAY
   A ... L         bass pads
   Z ... /         meow pads
   RETURN          record on / off
-  DEL             undo the last recording
+  DEL             undo the last recording ("Nothing to undo" before
+                  one, or after a slot switch)
   CRSR up/down    singer transpose
   CRSR left/right bass transpose
-  SPACE           play / stop
+  SPACE           play / stop (SHIFT+SPACE: pause)
+  1-9, 0          the next song on the bar line (SHIFT: new sounds)
+  + -             faster / slower
   <- (left arrow) back to editing
+
+  RETURN, DEL, SPACE, <- and RUN/STOP count only when held on their
+  own: the C64's keyboard can read three pads held at once as a key
+  that isn't pressed, and that must not stop the band.
 
 MOUSE (PORT 1)
 
@@ -921,7 +987,8 @@ MOUSE (PORT 1)
   on the Meows page a click on a meow's mark or name plays it. On the
   settings line: [ ] Preview on / off, T back. On the disk page: click
   a file, the floppy picture (Dir), the buttons (New only by click),
-  Yes and No, and after New: This slot, All slots, Defaults, No.
+  Yes and No, and after New: This slot, All slots, Defaults, No. A
+  right click on a settings box puts it back as made, too.
 
   The first click only wakes the pointer. Keys do nothing while a
   mouse button is held.
@@ -930,7 +997,8 @@ JOYSTICK (PORT 2)
 
   The joystick is a second mouse: everything above works with it.
 
-  move                move the pointer (faster as you hold it)
+  move                move the pointer (faster as you hold it; over
+                      the matrix a cell a push)
   FIRE                a left click (when you let go)
   FIRE held 1/2 sec   a right click
 
@@ -943,22 +1011,27 @@ APPENDIX B   THE TEN STYLES
 
   KEY STYLE      BPM  SCALE               WHAT TO LISTEN FOR
   1   DANCEHALL   94  D major pentatonic  the sliding digital bass
-  2   ROOTS       75  A minor pentatonic  the one drop: beat 1 empty
+  2   ROOTS       75  A minor pentatonic  the one drop: beat 1 empty;
+                                          with a second SID a dub
+                                          filtered bass delay
   3   STEPPERS   125  E dorian            a kick on every beat
   4   SKA        150  G major pentatonic  the off-beat strum
   5   BOSSA      125  F lydian            the rim clave, root-fifth bass
-  6   DISCO      125  A dorian            the octave bass, open hats
+  6   DISCO      125  A dorian            the octave bass, open hats,
+                                          the bass pumping (Sidechain)
   7   FUNK       107  E dorian            ghost snares, the "one"
   8   NEKO TRAP  150  E hirajoshi         half time, 808 slides, weird
                                           meows (see below)
   9   ACID       125  A phrygian          the squelchy sliding bass
+                                          (Meowize and Res boost)
   0   SHUFFLE    107  E blues             a twelve-bar blues
 
 When you switch on, song slot 1 holds the dancehall song, slot 2 the
 roots song, and so on to slot 0, the shuffle. SHIFT and a style's key
 gives any song that style's sounds, its key and its scale (Chapter 4).
 The BPM and the settings come with a style's song, not with its
-sounds.
+sounds. The skank (SK) strums the root, fifth and octave of the song's
+key, so it fits every style.
 
 NEKO TRAP is the style for the settings pages (Chapter 6). Its mews
 are dark, zippy chirps (Bend +6, Vowel -7, Tone -2), its meows wail
@@ -1039,7 +1112,9 @@ THE MATRIX (the middle)
           a block is a note, followed by a bar while it holds; a
           yellow arrow is a note sliding in; a light red block is a
           note that is off the scale of the moment (after a change of
-          mode). The arrows at the right edge scroll the rows.
+          mode, or new sounds from another style). The style's scale
+          holds the notes of its own bass line too, so its songs show
+          none. The arrows at the right edge scroll the rows.
   MEOWS   the note each row sings at its start; a ball is a mew, a
           heart a meow, a ring an ooh, a ? a mrr; grey marks are where
           the dub echoes land. The arrows at the right edge scroll.
@@ -1176,7 +1251,11 @@ Messages appear on the settings line for a few seconds.
                                   open slot and plays
   Next bar: slot N                slot N opens at the end of the bar
                                   (press the open slot's key to call it
-                                  off)
+                                  off); it stays until then
+  Switch called off               no switch, no new sounds after all
+  Nothing to undo                 live play: DEL, but no recording of
+                                  this song to undo yet
+  RUN/STOP: help  <-: live play   for three seconds after the title
   New sounds at the next bar      the open song gets the style's sounds
                                   at the end of the bar
   A new song in this slot         New, This slot: an empty song in the
@@ -1201,8 +1280,20 @@ On the disk page, messages appear on the page's bottom line:
   Overwrite NAME?      a file of that name is on the disk: Yes (Y)
                        replaces it, No (N) keeps it
   Delete NAME?         Yes (Y) deletes it, No (N) keeps it
-  New:                 This slot (T), All slots (A), Defaults (D) or
-                       No (N)
+  Not a song! Delete NAME?
+                       the same, for a file that isn't a song
+  New:                 This slot (SHIFT+T), All slots (SHIFT+A),
+                       Defaults (SHIFT+D) or No (N)
+  Replace all ten songs?
+                       after All slots or Defaults: Yes (Y) or No (N)
+  Not saved! Load over it?
+                       the open slot has changes you didn't save:
+                       Yes (Y) loads anyway, No (N) keeps them
+  Not a song there: another name
+                       Save won't overwrite a file that isn't a song
+  No $ * ? , = : / or odd signs here
+                       Save and Delete refuse such a name: the drive
+                       reads those as patterns or commands
   Type a name first    the Name field is empty
   Not a CatSynth song  that file is not a song (or is far too long
                        for one, like the program itself)

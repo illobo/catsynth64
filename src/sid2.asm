@@ -16,7 +16,7 @@
 ;
 ;   sid2_init   after sid_detect/sid_init: probes $d420..$d4e0, takes the
 ;               first SID found (sid2_use) and leaves SID 1 initialised
-;               again. About 0.1 s a candidate (0.6 s on a stock C64).
+;               again. About 0.04 s a candidate (0.3 s on a stock C64, silent).
 ;   sid2_use    A = SID 2's address low byte ($20..$e0): play on it
 ;   sid2_show   "sid2 d4xx" on the panel's top row (nothing without one),
 ;               after screen_init
@@ -46,7 +46,10 @@ sid2_init
 
 ; Y = candidate - $d400: C clear if a SID of its own answers there
 s2probe jsr s1v3off             ; SID 1's voice 3 silent: its ENV3 falls to 0
-        lda #0
+        lda #$9f                ; voice 3 off the output (3OFF; the volume
+        sta $d418               ; stays, so no click): the probe is silent,
+        sta $d418,y             ; ENV3 still reads back (sid_init and
+        lda #0                  ; sid2_use set $1f again)
         sta $d413,y             ; attack 0
         lda #$f0
         sta $d414,y             ; sustain 15, release 0
@@ -97,18 +100,14 @@ s2w1    ldx #0
         rts
 
 ; A = SID 2's address low byte: its voices, model and registers
-; (X = 3, 4, 5 are its voices 1, 2, 3: sidoff = base, +7, +14; each one's
-; ring-mod source the voice before it: voice 1's is voice 3, voice 2's
-; voice 1)
+; (X = 3, 4, 5 are its voices 1, 2, 3: sidoff = base, +7, +14)
 sid2_use
         sta sid2
         sta sidoff+3            ; its voice 1
-        sta modoff+4            ; (voice 2's source)
         clc
         adc #7
         sta sidoff+4            ; its voice 2
         adc #7
-        sta modoff+3            ; (voice 1's source)
         sta sidoff+5            ; the third: the bass delay
         lda #$d4
         sta sid2+1

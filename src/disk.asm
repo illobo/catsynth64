@@ -58,11 +58,16 @@
 ;                 tweak bytes, above) and that the masks use exactly A bytes.
 ;                 Out: C = 1 bad, song and tweaks untouched (unpacked to a
 ;                 scratch area first).
-;                 Step bytes are not checked.
+;                 Drum step bytes must be roles 0..NKIT (bass and singer
+;                 bytes are any value: every one plays something).
 ;   disk_setname  X/Y = a name (PETSCII), A = its length (1-16): the file
 ;                 disk_saven, disk_loadn and disk_scratch use.
-;   disk_saven    song_pack, scratch "S0:name" on the command channel,
-;                 SAVE, read the drive's status.
+;   disk_saven    song_pack, SAVE it as "CS64 TMP"; only when that went
+;                 well, scratch "S0:name" and rename the new file to name
+;                 ("R0:name=CS64 TMP"): a failed save (disk full...) leaves
+;                 the old file as it was. The drive's status read each time.
+;   disk_savenew  song_pack, SAVE under the name: with a file there already
+;                 (the drive's 63) C = 1, A = DE_EXISTS, nothing changed.
 ;   disk_loadn    OPEN name (secondary 0) and CHRIN into disk_buf, at most
 ;                 DK_PACKMAX bytes after the load address (a longer file is
 ;                 a bad file, read no further: nothing past disk_buf is
@@ -76,6 +81,7 @@
 ;       $10   bad file (not a song, or too long)
 ;       $11   drive error: disk_dos holds its code (26 write protect,
 ;             72 disk full...)
+;       $12   disk_savenew: the file is there already
 ;     disk_st = the KERNAL status ($90) after the SAVE / LOAD,
 ;     disk_dos = the drive's status code (binary, 0 = ok),
 ;     disk_bank = $dd00 as the KERNAL left it (bits 0-1: the VIC bank,
@@ -117,6 +123,7 @@ DISK_DEV = 8
 
 DE_BADFILE = $10                ; disk_err: not a song (or too long)
 DE_DRIVE   = $11                ; ...the drive said no (disk_dos)
+DE_EXISTS  = $12                ; ...disk_savenew: a file of that name is there
 
 ; the KERNAL's jump table
 K_SETLFS = $ffba                ; A = file no., X = device, Y = secondary
@@ -233,7 +240,8 @@ song_unpack
         bpl -
         jsr up_tw               ; the tweaks -> dk_tmp+DK_SONGLEN, X: in
         bcc up_rows
-up_bad2 rts                     ; (C = 1: bad)
+up_bad2 sec                     ; (bad: from up_tw with C set, or cut short
+        rts                     ; at a row's mask, with C clear)
 up_rows stx dk_t                ; dk_rem: the row bytes (the length - X;
         lda disk_len            ; X never passes 255 while there are some)
         sec
@@ -271,7 +279,24 @@ up_step lsr dk_mhi              ; C = step's bit, step 0 first
         bne up_bad
         lda disk_buf+2          ; version 1: drum sounds -> drum roles
         cmp #1
-        bne up_copy
+        beq up_v1
+        ldx #DK_HDR             ; 2-5: the drum rows hold roles 0..NKIT; a
+up_ckrow                        ; bigger byte (a damaged or hand-made file)
+        ldy #16                 ; would send the player into data: refused
+-       lda dk_tmp,x
+        cmp #NKIT+1
+        bcs up_bad
+        inx
+        dey
+        bne -
+        txa                     ; past the bass and singer rows
+        clc
+        adc #32
+        tax
+        cpx #DK_HDR+192
+        bcc up_ckrow
+        bcs up_copy
+up_v1
         ldx #DK_HDR             ; X: slot s's drum row, s*48 on
 up_cvrow
         lda #16                 ; dk_t: the row's 16 steps
@@ -443,14 +468,88 @@ up_15   cmp #15                 ; v4's 0-15 scale -> 0-16: 15 is 16 now
 disk_save
         jsr dk_slot
 disk_saven
+        lda #1                  ; (replace: by way of a temporary file)
+        .byte $2c               ; (bit abs: skips the lda below)
+disk_savenew
+        lda #0                  ; (new: a file there already is not touched)
+        sta dk_repl
         jsr dk_clr
         jsr song_pack
         jsr dk_enter
-        jsr dk_scratch          ; "S0:name": scratch it first
-        bcs dk_kerr
+        lda dk_repl
+        bne dsv_rep
+        jsr dk_setname          ; new: SAVE under the name; the drive says
+        jsr dk_save             ; 63 FILE EXISTS if there is one, and
+        bcs dsv_k             ; leaves it as it was
+        lda disk_dos
+        cmp #63
+        bne +
+        lda #DE_EXISTS
+        bne dsv_k
++       cmp #20                 ; 00 ok (0x: messages), 20 up: errors
+        bcs dsv_d
+        jmp dk_ok
+dsv_k   jmp dk_kerr             ; (the common exits, in reach)
+dsv_d   jmp dk_drverr
+dsv_rep lda #len(DK_TMPN)+3     ; replace: the new song saved as the
+        ldx #<dk_scrtmp         ; temporary file first ("S0:" it, from an
+        ldy #>dk_scrtmp         ; earlier failure)...
+        jsr dk_send
+        bcs dsv_k
+        lda #len(DK_TMPN)
+        ldx #<dk_scrtmp+3
+        ldy #>dk_scrtmp+3
+        jsr K_SETNAM
+        jsr dk_save
+        bcs dsv_bad
+        lda disk_dos
+        cmp #20
+        bcs dsv_bdd
+        jsr dk_scratch          ; ...only then the old one scratched,
+        bcs dsv_k
+        ldx dk_nlen             ; ...and the temporary file renamed:
+        lda #"="                ; "R0:name=CS64 TMP"
+        sta dk_ren+3,x
+-       lda dk_cmd+2,x          ; (the name, at dk_ren+3)
+        sta dk_ren+2,x
+        dex
+        bne -
+        ldx #len(DK_TMPN)-1
+        ldy dk_nlen
+-       lda dk_scrtmp+3,x
+        sta dk_ren+4+len(DK_TMPN)-1,y
+        dey
+        dex
+        bpl -
+        lda dk_nlen
+        clc
+        adc #4+len(DK_TMPN)
+        ldx #<dk_ren
+        ldy #>dk_ren
+        jsr dk_send
+        bcs dsv_k
+        lda disk_dos
+        cmp #20
+        bcs dsv_d
+        jmp dk_ok
+dsv_bdd lda #DE_DRIVE           ; the save failed (disk full...): the
+dsv_bad sta disk_err            ; temporary file goes, the old one is
+        lda disk_dos            ; still there
+        pha
+        lda #len(DK_TMPN)+3
+        ldx #<dk_scrtmp
+        ldy #>dk_scrtmp
+        jsr dk_send
+        pla
+        sta disk_dos
+        lda disk_err
+        cmp #DE_DRIVE
+        beq dsv_d
+        jmp dk_kerr
 
-        jsr dk_setname
-        lda #1                  ; file 1, drive 8, secondary 0 (SAVE: the
+; SAVE disk_buf (disk_len bytes) as the file SETNAM named, then the drive's
+; status (disk_dos). C = 1, A = KERNAL error.
+dk_save lda #1                  ; file 1, drive 8, secondary 0 (SAVE: the
         ldx #DISK_DEV           ; start address goes first)
         ldy #0
         jsr K_SETLFS
@@ -472,15 +571,20 @@ disk_saven
         jsr K_SAVE
         ldx $90                 ; ST
         stx disk_st
-        bcs dk_kerr
+        bcs dks9
         txa
-        bmi dk_dnp              ; (bit 7: device not present)
-        jsr dk_status
-        bcs dk_kerr
-        lda disk_dos
-        cmp #20                 ; 00 ok (0x: messages), 20 up: errors
-        bcs dk_drverr
-        jmp dk_ok
+        bmi dks_np              ; (bit 7: device not present)
+        jmp dk_status
+dks_np  lda #5
+        sec
+dks9    rts
+
+        .enc "none"
+DK_TMPN = "cs64 tmp"            ; (64tass's "none": ASCII lower case becomes
+dk_scrtmp .text "s0:", DK_TMPN   ; PETSCII $41-$5a, the drive's capitals)
+dk_ren  .text "r0:"             ; "R0:name=CS64 TMP"
+        .fill 1 + 16 + len(DK_TMPN)
+dk_repl .byte 0
 
 ; "S0:name" on the command channel, then the drive's status (01 files
 ; scratched, also when there was none). C = 1, A = KERNAL error.
@@ -490,7 +594,8 @@ dk_scratch
         adc #3
         ldx #<dk_cmd
         ldy #>dk_cmd
-        jsr K_SETNAM
+; A, X/Y = a command: sent on the command channel, then the drive's status
+dk_send jsr K_SETNAM
         jsr dk_lfs15
         jsr K_OPEN
         bcs +
@@ -507,12 +612,18 @@ dk_scnp lda #5
 disk_scratch
         jsr dk_clr
         jsr dk_enter
+        inc dk_wantn            ; (how many went: the status's number)
         jsr dk_scratch
+        dec dk_wantn
         bcs dk_kerr
         lda disk_dos
         cmp #20                 ; (01 files scratched is fine)
         bcs dk_drverr
-        jmp dk_ok
+        lda disk_cnt            ; ...but 0 files scratched: none matched
+        bne +
+        lda #4                  ; (file not found)
+        bne dk_kerr
++       jmp dk_ok
 
 ; the common exits (also from diskui.asm's dir_read): dk_leave, then
 ; disk_err and C set as the routines above say
@@ -688,8 +799,9 @@ dk_status
         jsr K_SETNAM
         jsr dk_lfs15
         jsr K_OPEN
-        bcs dk_st9
-        ldx #15
+        bcc +
+        rts                     ; (C, A: OPEN's error)
++       ldx #15
         jsr K_CHKIN
         bcs dk_st8
         jsr K_CHRIN             ; tens (ASCII "0"-"9": the low nibble)
@@ -705,7 +817,36 @@ dk_status
         clc
         adc dk_t
         sta disk_dos
-        lda $90                 ; timeout / no device (ST bits 0, 1, 7); the
+        lda #1                  ; the number after the text ("01,FILES
+        sta disk_cnt            ; SCRATCHED,03,00": 3 files), for
+        lda dk_wantn            ; disk_scratch only: past two commas, two
+        beq dk_stx              ; digits (at most 40 bytes read)
+        lda #0
+        sta disk_cnt
+        ldy #2
+        ldx #40
+-       jsr K_CHRIN
+        cmp #","
+        bne +
+        dey
+        beq ++
++       dex
+        bne -
+        beq dk_stx              ; (no such number: 0)
++       jsr K_CHRIN
+        and #15
+        asl a
+        sta dk_t
+        asl a
+        asl a
+        adc dk_t
+        sta dk_t
+        jsr K_CHRIN
+        and #15
+        clc
+        adc dk_t
+        sta disk_cnt
+dk_stx  lda $90                 ; timeout / no device (ST bits 0, 1, 7); the
         and #$83                ; rest of the message is not read: CLOSE
         php
         jsr K_CLRCHN
@@ -815,6 +956,8 @@ dk_rem  .byte 0                 ; song_unpack: the row bytes still to come
 disk_err  .byte 0               ; (the outputs: see the top)
 disk_st   .byte 0
 disk_dos  .byte 0
+disk_cnt  .byte 0               ; the drive status's first number (scratched)
+dk_wantn  .byte 0               ; 1: dk_status reads that number too
 disk_bank .byte 0
 disk_len  .byte 0
 dk_mlo  .byte 0                 ; a row's step mask

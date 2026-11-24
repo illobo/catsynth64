@@ -60,10 +60,7 @@ sfx_play
         sta sptrh,x
         lda #0
         sta swait,x
-        sta pslc,x
         sta wslc,x
-        sta cslc,x
-        sta chop,x
         sta gslc,x
         ldx sfxx
         ldy sfxy
@@ -71,7 +68,7 @@ sfx_play
         rts
 
 ; once a frame (the bottom IRQ): each voice, nvoice down to 0, its glide,
-; slides and chop, then its script unless it waits; then the after-voices
+; pulse width slide, then its script unless it waits; then the after-voices
 ; work (squelch, dubflt, scduck). Changes A, X, Y.
 sfx     ldx nvoice
 sfxloop stx sfxv
@@ -92,20 +89,7 @@ glpos   clc
         sta pth,x
         jsr p2f
 glnone
-        lda pslc,x              ; pitch slide
-        beq +
-        dec pslc,x
-        ldy rofs
-        clc
-        lda flo,x
-        adc pdl,x
-        sta flo,x
-        sta $d400,y
-        lda fhi,x
-        adc pdh,x
-        sta fhi,x
-        sta $d401,y
-+       lda wslc,x              ; pulse width slide
+        lda wslc,x              ; pulse width slide
         beq +
         dec wslc,x
         ldy rofs
@@ -118,25 +102,6 @@ glnone
         adc wdh,x
         sta pwh,x
         sta $d403,y
-+       lda cslc,x              ; filter slide
-        beq +
-        dec cslc,x
-        lda cutoff              ; (this voice's SID)
-        cpx #3
-        bcc csl1
-        lda cutoff2
-csl1    clc
-        adc cdl,x
-        jsr wcut
-+       lda chop,x              ; 25 Hz chop: waveform off on odd frames,
-        beq +                   ; gate untouched so the envelope runs on
-        ldy rofs
-        lda frame
-        lsr a                   ; C = frame bit 0
-        lda ctl,x
-        bcc chopon
-        and #$0f                ; (the waveform bits 4-7 off)
-chopon  sta $d404,y
 +       lda swait,x             ; waiting: a frame less; the last one runs on
         beq +
         dec swait,x
@@ -164,7 +129,10 @@ sfxnext dex
 ; to end the voice's frame)
 sfxrun  ldy #0
         lda (sp),y
-        asl a
+        cmp #SXCMDS             ; (not a command: the script ends there)
+        bcc +
+        tya
++       asl a
         tay
         lda sxcmds+1,y          ; the handler's address - 1, pushed: the rts
         pha                     ; below jumps to it
@@ -175,9 +143,13 @@ sfxrun  ldy #0
 
 ; the SX_* handlers - 1 (for the rts above), indexed by the command
 sxcmds  .word sx_end-1, sx_adsr-1, sx_freq-1, sx_ctrl-1, sx_wait-1, sx_pw-1
-        .word sx_cut-1, sx_pslide-1, sx_wslide-1, sx_cslide-1, sx_modf-1
-        .word sx_jump-1, sx_route-1, sx_chop-1, sx_call-1, sx_poke-1
+        .word sx_cut-1, sx_end-1, sx_wslide-1, sx_end-1, sx_end-1
+        .word sx_jump-1, sx_end-1, sx_end-1, sx_call-1, sx_poke-1
+        ; (7 PSLIDE, 9 CSLIDE, 10 MODF, 12 ROUTE, 13 CHOP: no script used
+        ; them, and their per-frame checks cost every voice: gone, they end
+        ; a script)
         .word sx_note-1, sx_glide-1, sx_mf-1, sx_mfv-1, sx_stop-1
+SXCMDS  = (* - sxcmds) / 2
 
 ; SX_CALL lo, hi: run the script there, then the next one here (one level:
 ; a call inside a call loses the first return)
@@ -200,12 +172,6 @@ sx_poke lda (sp),y
         lda #3
         jmp sxadv
 
-; SX_CHOP on: 1 = the 25 Hz chop (sfx), 0 = off
-sx_chop lda (sp),y
-        sta chop,x
-        lda #2
-        jmp sxadv
-
 ; SX_JUMP lo, hi: go on at that script (sx_call too)
 sx_jump lda (sp),y
         pha
@@ -216,18 +182,9 @@ sx_jump lda (sp),y
         sta sp
         jmp sfxrun
 
-; SX_ROUTE v: SID 1's $d417 = v, through wroute (whatever the voice)
-sx_route
-        lda (sp),y
-        jsr wroute
-        lda #2
-        jmp sxadv
-
-; SX_END: the gate off (the release runs), the chop off; then back to the
-; caller of an SX_CALL, or idle
-sx_end  lda #0
-        sta chop,x
-        lda ctl,x
+; SX_END: the gate off (the release runs); then back to the caller of an
+; SX_CALL, or idle
+sx_end  lda ctl,x
         and #$fe                ; gate bit off
         ldy rofs
         sta $d404,y
@@ -252,8 +209,21 @@ sx_adsr lda (sp),y
         bne +
         jsr srlow
 +       ldy rofs
-        sta $d406,y             ; sustain (high nibble), release
+        .if HR2                 ; a note's SR (not 0, the gate off): kept
+        cmp #0                  ; for sx_ctrl to write right after its
+        beq +                   ; gate-on; written before it, it would
+        pha                     ; start the ADSR delay bug's count again
+        lda ctl,x
+        lsr a
         pla
+        bcs +                   ; (the gate on: now)
+        sta srq,x
+        lda #1
+        sta srqf,x
+        bne ++
+        .endif
++       sta $d406,y             ; sustain (high nibble), release
++       pla
         sta $d405,y             ; attack (high nibble), decay
         lda #3
         jmp sxadv
@@ -286,12 +256,37 @@ sx_ctrl lda (sp),y
 +       sta ctl,x
         ldy rofs
         sta $d404,y
+        .if HR2
+        cmp #0                  ; a hard restart (CTRL 0): its WAIT is a
+        bne +                   ; frame longer (2 frames gated off at ADSR
+        lda #1                  ; 0, enough for the envelope to reach 0)
+        sta hrx,x
+        bne sxc9
++       lsr a                   ; a gate-on: the note's queued SR now
+        bcc sxc9
+        lda srqf,x
+        beq sxc9
+        lda #0
+        sta srqf,x
+        lda srq,x
+        sta $d406,y
+sxc9
+        .endif
         lda #2
         jmp sxadv
 
 ; SX_WAIT n: the script waits n frames; the end of this frame's run
 sx_wait lda (sp),y
         sta swait,x
+        .if HR2
+        lda hrx,x               ; (after a hard restart's CTRL 0: a frame
+        beq +                   ; more, as W(2): WAIT 1 and 2 both end the
+        inc swait,x             ; next frame, WAIT 3 the one after)
+        inc swait,x
+        lda #0
+        sta hrx,x
++
+        .endif
         dec swait,x             ; this frame counts as the first
         lda #2
         clc
@@ -323,19 +318,6 @@ sx_cut  lda (sp),y
         lda #2
         jmp sxadv
 
-; SX_PSLIDE dlo, dhi, n: the frequency + d a frame, for n frames (sfx)
-sx_pslide
-        lda (sp),y
-        sta pdl,x
-        iny
-        lda (sp),y
-        sta pdh,x
-        iny
-        lda (sp),y
-        sta pslc,x
-        lda #4
-        jmp sxadv
-
 ; SX_WSLIDE dlo, dhi, n: the pulse width + d a frame, for n frames
 sx_wslide
         lda (sp),y
@@ -348,30 +330,6 @@ sx_wslide
         sta wslc,x
         lda #4
         jmp sxadv
-
-; SX_CSLIDE d, n: the cutoff + d (signed) a frame, for n frames
-sx_cslide
-        lda (sp),y
-        sta cdl,x
-        iny
-        lda (sp),y
-        sta cslc,x
-        lda #3
-        jmp sxadv
-
-; SX_MODF lo, hi: the frequency of voice X's ring-mod / sync source (modoff)
-sx_modf ldy modoff,x
-        sty sfxy
-        ldy #1
-        lda (sp),y
-        pha
-        iny
-        lda (sp),y
-        ldy sfxy
-        sta $d401,y
-        pla
-        sta $d400,y
-        lda #3                  ; (on into sxadv)
 
 sxadv   clc                   ; skip A bytes, next command
         adc sp
@@ -563,6 +521,12 @@ srlvl   sta srtmp
         adc srm
         dey
         bne -
+        .if LVROUND             ; (rounded, and at least 1 while the sound
+        adc #8                  ; had any: a small cat's quiet echo stays a
+        and #$f0                ; whisper, not silence; C clear: s * mul
+        bne +                   ; is at most 210)
+        lda #$10
+        .endif
 +       and #$f0
         sta srs
         lda srtmp
@@ -685,6 +649,8 @@ dtd     .word 0                 ; f / 16
 ; A = control byte of the bass: its waveform as the Wave setting (0: the
 ; style's, 1 pulse, 2 saw, 3 triangle), the gate and the rest kept
 bwave   pha
+        and #$f0                ; (no waveform, the hard restart's $00 or
+        beq bw9                 ; a gate-off: left so, the voice is quiet)
         lda btweak
         and #$0f
         beq bw9
@@ -821,7 +787,6 @@ cutoff2 .byte 0                 ; its cutoff, as cutoff
 cut2own .byte 3                 ; the voice that owns its filter
 cdark2  .byte 0                 ; the echo voice's darkening, as cdark
 sidoff  .byte 0, 7, 14, $20, $27, $2e   ; SID 2's three: set by sid2_use
-modoff  .byte 14, 0, 7, $2e, $20, $27   ; ring-mod source of each voice
 vslot   .byte 0, 0, 0, 1, 2, 0  ; the meow contour each voice reads (pitch.asm)
 ctour   .fill 3*8               ; contours: the meow, its echo, the harmony
 ; each voice's state, indexed by X = voice
@@ -833,15 +798,14 @@ flo     .fill NV              ; frequency
 fhi     .fill NV
 pwl     .fill NV              ; pulse width
 pwh     .fill NV
-pdl     .fill NV              ; pitch slide: d a frame, frames left
-pdh     .fill NV
-pslc    .fill NV
 wdl     .fill NV              ; pulse width slide: d a frame, frames left
 wdh     .fill NV
 wslc    .fill NV
-cdl     .fill NV              ; cutoff slide: d a frame, frames left
-cslc    .fill NV
-chop    .fill NV              ; the 25 Hz chop on
+        .if HR2
+srq     .fill NV              ; a note's SR, for the gate-on (sx_adsr)
+srqf    .fill NV              ; ...1: waiting
+hrx     .fill NV              ; 1: the next WAIT follows a hard restart
+        .endif
 retl    .fill NV              ; SX_CALL's return (reth 0: none)
 reth    .fill NV
 ptl     .fill NV              ; pitch, 1/16 semitones from C0

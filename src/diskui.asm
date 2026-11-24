@@ -122,8 +122,11 @@ disk_close
         bpl -
         lda #0
         sta diskon
-        lda #1                  ; a fire that closed it is no tap
+        lda joy                 ; a fire that closed it is no tap (only
+        and #$10                ; then: closed by a key or the mouse, the
+        beq +                   ; next fire tap is a tap)
         sta fused
++
         lda #$ff
         sta lstep2
         sta cursat
@@ -135,18 +138,20 @@ disk_close
 ; once a frame while the page is up (catsynth.asm dispatch): all the keys
 dkeys   lda dstate
         beq dk0
-        cmp #3                  ; New?: T this slot, A all, D defaults
-        bne dk1
+        cmp #3                  ; New?: SHIFT+T this slot, SHIFT+A all,
+        bne dk1                 ; SHIFT+D defaults (plain letters: nothing,
+        jsr shifted             ; they are the Name field's)
+        beq dknn
         #pressed K_T
         beq +
         jmp dnslot
 +       #pressed K_A
         beq +
-        jmp dnall
+        jmp dnallq
 +       #pressed K_D
-        beq +
-        jmp dndef
-+       #pressed K_N
+        beq dknn
+        jmp dndefq
+dknn    #pressed K_N
         bne +
         #pressed K_STOP
         beq dk9n
@@ -244,25 +249,25 @@ keypet  .byte 0, 0, 0, 0, 0, 0, 0, 0    ; (column 0: DEL, RETURN, CRSR, F keys)
 ; from ui_click: X = column, Y = row
 dclick  lda dstate
         beq dc0
-        cmp #3                  ; New?: This slot (6-15), All slots (17-26),
-        bne dcyn                ; Defaults (28-35), else no
-        cpy #24                 ; (row 24 only)
-        bne dcnno
+        cmp #3                  ; New?: This slot (6-14), All slots (16-24),
+        bne dcyn                ; Defaults (26-32), else no (No sits under
+        cpy #24                 ; the New button: a second click there is
+        bne dcnno               ; a no); row 24 only
         cpx #6
         bcc dcnno
-        cpx #16
+        cpx #15
         bcs +
         jmp dnslot
-+       cpx #17
++       cpx #16
         bcc dcnno
-        cpx #27
+        cpx #25
         bcs +
-        jmp dnall
-+       cpx #28
+        jmp dnallq
++       cpx #26
         bcc dcnno
-        cpx #36
+        cpx #33
         bcs dcnno
-        jmp dndef
+        jmp dndefq
 dcnno   jmp dno
 dcyn    cpy #24                 ; asking: Yes (29-33), No (34-38), else no
         bne +
@@ -412,7 +417,18 @@ dsl9    rts
 dload   lda nlen
         bne +
         jmp dnoname
-+       ldx #<dm_loading
++       jsr sedited             ; changes not saved in this slot: asked
+        beq dloadgo             ; first (dyes: dloadgo)
+        lda #6
+        sta dstate
+        ldx #<dm_changes
+        ldy #>dm_changes
+        lda #C_YEL
+        jsr dmsg
+        ldx #<dpgyesno
+        ldy #>dpgyesno
+        jmp dputs
+dloadgo ldx #<dm_loading
         ldy #>dm_loading
         jsr dmsgw
         jsr dio_begin
@@ -423,6 +439,7 @@ dload   lda nlen
         jmp derror
 +       jsr disk_close          ; the song in the open slot, with the file's
         jsr dslname             ; name, playing, the panel back
+        jsr sclean              ; (as on the disk: no changes)
         lda #0
         sta pslot
         sta pstyle
@@ -438,23 +455,41 @@ dload   lda nlen
 dsave   lda nlen
         bne +
         jmp dnoname
-+       jsr dfind               ; on the disk already: ask first
-        bcs dsavego
-        lda #1
++       jsr dwild               ; (* ? , = : in the name: refused)
+        bcs dsv9
+        jsr dfind               ; in the list: ask first (not over a file
+        bcs dsvnew              ; that isn't a song: the program, a SEQ...)
+        jsr dsong
+        bcc dsvask
+        ldx #<dm_notover
+        ldy #>dm_notover
+        jmp dmsgerr
+dsvask  lda #1
         sta dstate
         ldx #<dm_overwr
         ldy #>dm_overwr
         jmp dask
-dsavego ldx #<dm_saving
+dsvnew  lda #0                  ; not in the list (it may be longer than
+        .byte $2c               ; DMAX, or another disk): saved only if
+dsavego lda #1                  ; the drive has no such file (then asked)
+        sta dsvmode
+        ldx #<dm_saving
         ldy #>dm_saving
         jsr dmsgw
         jsr dio_begin
         jsr dname
-        jsr disk_saven
-        jsr dio_end
+        lda dsvmode
+        beq +
+        jsr disk_saven          ; (after a yes: replaced, safely)
+        jmp ++
++       jsr disk_savenew
++       jsr dio_end
         bcc +
+        cmp #DE_EXISTS
+        beq dsvask
         jmp derror
 +       jsr dslname             ; the open slot takes the name
+        jsr sclean              ; (saved: no changes)
         jsr dir_reload          ; the directory again, the new file selected
         bcs dsv9
         jsr dfind
@@ -470,11 +505,50 @@ dsv9    rts
 ddelete lda nlen
         bne +
         jmp dnoname
++       jsr dwild               ; (a pattern would scratch many files)
+        bcc +
+        rts
 +       lda #2
         sta dstate
-        ldx #<dm_delete
+        jsr dfind               ; (in the list and not a song: said so)
+        bcs +
+        jsr dsong
+        bcc +
+        ldx #<dm_delns
+        ldy #>dm_delns
+        jmp dask
++       ldx #<dm_delete
         ldy #>dm_delete
         jmp dask
+
+; X = a file in the list: C clear when it looks like a song (a PRG of 1 or
+; 2 blocks: a song file is at most 258 bytes)
+dsong   lda dtype,x
+        cmp #2
+        bne dsg9
+        txa
+        sta dtx
+        asl a
+        adc dtx                 ; (X * 3: its blocks' 3 screen codes)
+        tay
+        lda dbtxt,y             ; (the digits are stored with bit 7 set:
+        and #$7f                ; the UI font's bold)
+        cmp #$20
+        bne dsg9
+        lda dbtxt+1,y
+        and #$7f
+        cmp #$20
+        bne dsg9
+        lda dbtxt+2,y
+        and #$7f
+        cmp #$31
+        beq +
+        cmp #$32
+        bne dsg9
++       clc
+        rts
+dsg9    sec
+        rts
 ddelgo  ldx #<dm_deleting
         ldy #>dm_deleting
         jsr dmsgw
@@ -499,6 +573,15 @@ dyes    lda dstate
         cmp #1
         bne +
         jmp dsavego
++       cmp #4
+        bne +
+        jmp dnall
++       cmp #5
+        bne +
+        jmp dndef
++       cmp #6
+        bne +
+        jmp dloadgo
 +       jmp ddelgo
 dno     lda #0
         sta dstate
@@ -517,9 +600,23 @@ dnew    lda #3
         ldy #>dpgnew
         jmp dputs
 
+; All slots, Defaults: asked once more (dstate 4, 5: dyes)
+dnallq  lda #4
+        .byte $2c
+dndefq  lda #5
+        sta dstate
+        ldx #<dm_allq
+        ldy #>dm_allq
+        lda #C_YEL
+        jsr dmsg
+        ldx #<dpgyesno
+        ldy #>dpgyesno
+        jmp dputs
+
 ; This slot / All slots / Defaults
 dnslot  jsr dnbegin
         jsr slot_blank
+        jsr sclean
         ldx #<msg_newslot
         ldy #>msg_newslot
         jmp dnend
@@ -530,6 +627,8 @@ dnall   jsr dnbegin
 -       stx dni
         jsr slot_fetch
         jsr slot_blank
+        ldx dni
+        jsr smark
         ldx dni
         jsr slot_put
         ldx dni
@@ -553,7 +652,8 @@ dnbegin lda #0
         sta dstate
         sta pslot
         sta pstyle
-        jmp disk_close
+        jsr sfx_stop            ; (All slots and Defaults take 7-11 frames:
+        jmp disk_close          ; no notes held meanwhile)
 ; X/Y = a message: the open slot plays, the message shown
 dnend   stx dnmsg
         sty dnmsg+1
@@ -580,6 +680,39 @@ dslname lda nlen
 dnoname ldx #<dm_noname
         ldy #>dm_noname
         jmp dmsgerr
+
+; C set (and said so) when the name field holds a character the drive
+; reads as a pattern or a separator: * ? , = : " $ @ / (a name picked from
+; the list can; "S0:" with it would scratch other files too, "$" reads the
+; directory, "@" is the 1541's save-and-replace), or anything odd: control
+; codes, shifted letters, graphics (outside PETSCII $20-$5f), which the
+; drive may take apart in its own ways
+dwild   ldx nlen
+-       dex
+        bmi dw9                 ; (C clear: none)
+        lda nbuf,x
+        cmp #$20                ; (control codes)
+        bcc dwbad
+        cmp #$60                ; (shifted letters, graphics, $a0)
+        bcs dwbad
+        ldy #len(DWILD)-1
+-       cmp dwilds,y
+        beq dwbad
+        dey
+        bpl -
+        bmi --
+dwbad   ldx #<dm_wild
+        ldy #>dm_wild
+        jsr dmsgerr
+        sec
+        rts
+dw9     clc
+        rts
+DWILD   = [$2a, $3f, $2c, $3d, $3a, $22, $24, $40, $2f]   ; * ? , = : " $ @ /
+dwilds  .byte DWILD
+dsvmode .byte 0                 ; dsave: 0 a new file, 1 replace (after a yes)
+dmsgdly .byte 15                ; dio_begin: frames the message shows first
+                                ; (the tests: 0)
 
 ; the name field -> disk_setname
 dname   ldx #<nbuf
@@ -613,6 +746,20 @@ dfno    sec
 ; the music paused, the interrupts off around disk I/O (C and A kept after)
 dio_begin
         jsr sfx_stop
+        ldx dmsgdly             ; the message ("Loading..."), the panel as it
+        beq +                   ; is: 15 frames to be read before the screen
+-       lda #$fa                ; blanks for the drive
+-       cmp $d012
+        bne -
+-       cmp $d012
+        beq -
+        dex
+        bne --
++
+        lda #0                  ; (a beat pulse under way: not its colour
+        sta ptime               ; round the blanked screen while the drive
+        lda #SCR_WALL_BG        ; works)
+        sta $d020
         lda running
         sta dwasrun
         lda #0
@@ -1067,7 +1214,10 @@ dlist_draw
 disk_tick
         lda #DPARTS
         sta dpn
--       jsr dpart
+-       lda #170                ; (a part is at most ~2300 cycles: one only
+        jsr roomy               ; while the frame has room for it; the rest
+        bcc +                   ; the next frame)
+        jsr dpart
         bcs +
         dec dpn
         bne -
@@ -1581,8 +1731,13 @@ dm_saved    .null "Saved"
 dm_deleted  .null "Deleted"
 dm_overwr   .null "Overwrite "
 dm_delete   .null "Delete "
+dm_delns    .null "Not a song! Delete "
+dm_notover  .null "Not a song there: another name"
 dm_newq     .null "New:"
+dm_allq     .null "Replace all ten songs?"
+dm_changes  .null "Not saved! Load over it?"
 dm_noname   .null "Type a name first"
+dm_wild     .null "No $ * ? , = : / or odd signs here"
 dm_notsong  .null "Not a CatSynth song"
 dm_notfound .null "File not found"
 dm_notready .null "Drive not ready"
@@ -1627,11 +1782,11 @@ dpgnew                          ; New?: the choices (dnew)
         .enc "screen"
         .byte 24, 6, C_LGN
         .null "This slot"
-        .byte 24, 17, C_LRD
+        .byte 24, 16, C_LRD
         .null "All slots"
-        .byte 24, 28, C_CYN
+        .byte 24, 26, C_CYN
         .null "Defaults"
-        .byte 24, 37, C_GRY
+        .byte 24, 34, C_GRY
         .null "No"
         .enc "none"
         .byte $ff

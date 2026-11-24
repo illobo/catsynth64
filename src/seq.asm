@@ -140,7 +140,13 @@ seq_apply
         lda song+2
         and #$0f
         sta swing
-        lda song+3              ; low nibble: echo steps
+        lda tempo               ; (a swing over tempo - 3, from an older
+        sec                     ; file: played at the cap, see setswing)
+        sbc #3
+        cmp swing
+        bcs +
+        sta swing
++       lda song+3              ; low nibble: echo steps
         and #$0f
         sta esteps
         lda song+3              ; high nibble: the singer's transpose (signed)
@@ -153,8 +159,19 @@ seq_apply
         ora #$f0                ; (the sign extended)
 +       sta transp
         jsr seq_retempo
+        lda #0                  ; the bass (and SID 2's bass delay): a note
+        jsr vsilent             ; held over a song change is cut, not left
+        lda sid2+1              ; droning
+        beq +
+        lda #5
+        jsr vsilent
++       lda route1              ; the song's filter routing (Meowize, Res
+                                ; boost, the Dub filter) into the SIDs now
+        jsr wroute1
         lda #0
         sta echo_n
+        sta cdark
+        sta audt                ; (an audition's timer: not on bar 0's bass)
         sta blen
         sta echoev
         sta hpos
@@ -383,10 +400,19 @@ bass_off
 trig_drum
         sta cathit
         jsr pulse_hit           ; the border's beat pulse (ui.asm)
-        cmp #3                  ; BD, BM: the bass ducks (sfx.asm scduck)
-        bcs +
+        tax                     ; a kick (BD, BM, and CP, DR: each kit's
+        lda rkick,x             ; clap and drop have a kick in them): the
+        beq +                   ; bass ducks (sfx.asm scduck)
         ldx #SCLEN
         stx scdk
++       lda cathit
+        cmp #13                 ; SK: the skank strums on the song's root,
+        bne +                   ; two octaves over the bass's (SX_NOTE)
+        lda bassroot
+        clc
+        adc #24
+        sta vnote+2
+        lda cathit
 +
         ldx cstyle
         clc
@@ -425,6 +451,15 @@ trig_bass
         ldy binst               ; plain or slide
         lda stmp
         bpl +
+        .if LEGATO
+        lda ctl                 ; a slide while the last note still sounds
+        lsr a                   ; (gate on, its script done: held): no
+        bcc tbsl                ; restart, the pitch glides there from
+        lda sptrh               ; where it is, as a 303's slide
+        bne tbsl
+        jmp legato
+tbsl
+        .endif
         iny
 +       lda basslo,y
         sta sl
@@ -432,6 +467,56 @@ trig_bass
         sta sh
         ldx #0
         jmp vstart
+
+        .if LEGATO
+; the bass (voice 0) glides from its pitch now to vnote in 4 frames: the
+; step a quarter of the way (1/16 semitones, signed), the start moved by
+; under a quarter so it lands on the note exactly
+legato  lda ptl                 ; where it sounds now
+        sta lgc
+        lda pth
+        sta lgc+1
+        lda vnote               ; the target * 16
+        ldx #0
+        jsr setsemi
+        lda ptl
+        sta lgt
+        lda pth
+        sta lgt+1
+        sec                     ; the distance
+        lda lgt
+        sbc lgc
+        sta lgd
+        lda lgt+1
+        sbc lgc+1
+        sta lgd+1
+        ldy #2                  ; / 4, signed (at most 31 semitones: the
+-       lda lgd+1               ; step fits a byte; lgd+1 its sign then)
+        cmp #$80
+        ror lgd+1
+        ror lgd
+        dey
+        bne -
+        lda lgd
+        sta gd                  ; the step a frame
+        asl lgd                 ; * 4: the start = target - 4 * step
+        rol lgd+1
+        asl lgd
+        rol lgd+1
+        sec
+        lda lgt
+        sbc lgd
+        sta ptl
+        lda lgt+1
+        sbc lgd+1
+        sta pth
+        lda #4
+        sta gslc
+        rts
+lgc     .word 0                 ; legato: the pitch before
+lgt     .word 0                 ; legato: the target
+lgd     .word 0                 ; ...a step, 4 steps
+        .endif
 
 ;  --- the mode changer and the bass transpose
 ; mode 0: the style's own scale; 1-7: major, minor, dorian, phrygian,
@@ -495,13 +580,9 @@ quant   sta stmp
         sbc mroot
         clc
         adc #120                ; (positive, a multiple of 12 apart)
--       cmp #12                 ; mod 12
-        bcc +
-        sbc #12
-        bcs -
-+       tay                     ; the pitch class
-        tya                     ; (a leftover: A is it already)
-        clc
+        tay
+        lda mod12,y             ; the pitch class (a table: the loop cost up
+        clc                     ; to ~100 cycles a note)
         adc mrow
         tay
         lda qdelta,y            ; (signed semitones to the mode's note)
@@ -551,19 +632,25 @@ bndown  eor #$ff                ; down: as many the other way
         beq -
         dec bnc
         bne -
-bn9     lda bnt
-        rts
+bn9     lda bnt                 ; under the lowest note (a transpose down
+-       cmp #3                  ; from the bottom octave, or wrapped below
+        bcc +                   ; 0): an octave up, so it never wraps to a
+        cmp #$c0                ; high note
+        bcc ++
++       clc
+        adc #12
+        sta bnt
+        bcc -                   ; (always)
++       rts
 ; Z clear when bnt is in smask (pitch class relative to the bass root)
 bnin    lda bnt
         sec
         sbc bassroot
         clc
         adc #120
--       cmp #12
-        bcc +
-        sbc #12
-        bcs -
-+       tay                     ; the pitch class: bit Y of smask
+        tay
+        lda mod12,y             ; the pitch class: bit Y of smask
+        tay
         cpy #8
         bcs +
         lda smask
@@ -573,6 +660,7 @@ bnin    lda bnt
         and bit8s-8,y
         rts
 bit8s   .byte 1, 2, 4, 8, 16, 32, 64, 128   ; bit n's mask, indexed by n
+mod12   .byte range(256) % 12   ; n mod 12, for n 0..255
 
 ; X = voice, sl/sh = script: start it now (this frame's sfx runs it)
 vstart  cpx #3                  ; on SID 2 the newest owns the filter (not
@@ -586,13 +674,15 @@ vstart  cpx #3                  ; on SID 2 the newest owns the filter (not
         sta sptrh,x
         lda #0
         sta swait,x
-        sta pslc,x
         sta wslc,x
-        sta cslc,x
-        sta chop,x
         sta gslc,x
         sta reth,x              ; no stale return from a cut-off echo
         rts
+
+harmd   .byte 0                 ; trig_sing: the harmony's degrees up
+mgap    .byte 0                 ; trig_sing: frames to the next meow (nextdist)
+; by drum role 0-14: 1 for the ones with a kick in them (BD BM CP DR)
+rkick   .byte 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1
 
 ; A = singer step byte, X = 1: plan echoes from the song (0: an audition,
 ; no echoes). Sets the contour, starts the meow. SID 2: the harmony too,
@@ -601,10 +691,23 @@ trig_sing
         stx sdist               ; (the flag, for now)
         sta cathit+2
         sta hstep
+        lda #255                ; frames to the next meow (an audition:
+        cpx #0                  ; none, all the time it wants)
+        beq +
+        jsr nextdist
++       sta mgap
         lda harmony             ; SID 2's harmony meow
         beq th1
         ldx sid2+1
         beq th1
+        cmp #4                  ; (the "5th": 4 degrees on a 7-note scale,
+        bne +                   ; 3 on a pentatonic one, else a 6th or 7th)
+        ldx cstyle
+        ldy sclen,x
+        cpy #6
+        bcs +
+        lda #3
++       sta harmd
         sta stmp
         lda hstep
         and #$1f
@@ -613,7 +716,7 @@ trig_sing
         cmp #27                 ; its peak must stay in degtab
         bcs th1
         lda hstep               ; its contour, harmony degrees up (X: kind)
-        ldy harmony
+        ldy harmd
         jsr contour
         ldy #2                  ; slot 2: the harmony's
         jsr cstore
@@ -629,6 +732,8 @@ th1     lda hstep               ; the singer's own
         stx echo_k
         ldy #0                  ; slot 0: the singer's
         jsr cstore
+        lda #0                  ; (a mono echo the meow cuts short leaves
+        sta cdark               ; no darkness behind)
         lda meowlo,x            ; start it
         sta sl
         lda meowhi,x
@@ -648,37 +753,7 @@ th1     lda hstep               ; the singer's own
         sta hist,y
         rts
 
-+       lda step                ; steps to the next meow, into the next bar
-        ora #32
-        tay
-        ldx #0                  ; X = steps ahead, Y = that singer cell
-la      inx
-        cpx #16
-        beq ldone               ; none for a bar: up to itself again
-        iny
-        cpy #48
-        beq lb0
-        lda (pp),y
-        beq la
-        bne ldone               ; (always: found)
-lb0     ldy #32                ; on in the next bar's singer row
-        bne lbchk               ; (always)
-lb      inx
-        cpx #16
-        beq ldone
-        iny
-lbchk   lda (np),y
-        beq lb
-ldone   lda #255                ; no meow for a bar: every echo fits
-        cpx #16
-        beq lfar
-        lda #0                  ; in frames, a swing's worth early
--       clc
-        adc tempo
-        dex
-        bne -
-        sec
-        sbc swing
++       lda mgap                ; (nextdist, at the start)
 lfar    sta sdist
         ldx echo_k              ; how many echoes fit before it: 0-2
         lda edframes
@@ -700,6 +775,80 @@ e1      inc echo_n
         bcs +
 e2      inc echo_n
 +       rts
+
+; the frames from this step to the next meow (in this bar or the next; a
+; swing's worth early), 255 when none comes for a bar: A
+nextdist
+        lda step                ; steps to the next meow, into the next bar
+        ora #32
+        tay
+        ldx #0                  ; X = steps ahead, Y = that singer cell
+la      inx
+        cpx #16
+        beq ldone               ; none for a bar: up to itself again
+        iny
+        cpy #48
+        beq lb0
+        lda (pp),y
+        beq la
+        bne ldone               ; (always: found)
+lb0     ldy #32                ; on in the next bar's singer row
+        bne lbchk               ; (always)
+lb      inx
+        cpx #16
+        beq ldone
+        iny
+lbchk   lda (np),y
+        beq lb
+ldone   lda #255                ; no meow for a bar: every echo fits
+        .if !ECHOBAR            ; (ECHOBAR: it comes back in 16 steps, so
+        cpx #16                 ; only the echoes that end before)
+        beq ndfar
+        .endif
+        lda #0                  ; in frames, a swing's worth early
+-       clc
+        adc tempo
+        dex
+        bne -
+        sec
+        sbc swing
+ndfar   rts
+
+        .if MEOWFIT
+; A = the Bend index (0-16), X = the meow kind: capped when the next meow
+; comes before this one ends (mgap < mlen: it would be cut at the peak, off
+; its note): at most mgap * 8 / mlen, a Bend that much flatter, so a cut
+; meow ends near its written note (a cut halfway: half the swoop)
+bcap    sta bci
+        lda mgap
+        cmp mlen,x
+        bcs bc9                 ; (it fits: as set)
+        sta bcv                 ; mgap * 8, 16 bits
+        lda #0
+        sta bcv+1
+        ldy #3
+-       asl bcv
+        rol bcv+1
+        dey
+        bne -
+        ldy #$ff                ; Y = how many mlen fit in it (0-7)
+-       iny
+        lda bcv
+        sec
+        sbc mlen,x
+        sta bcv
+        bcs -
+        dec bcv+1
+        bpl -
+        cpy bci                 ; the smaller
+        bcs bc9
+        tya
+        rts
+bc9     lda bci
+        rts
+bci     .byte 0
+bcv     .word 0
+        .endif
 
 ; A = singer step byte, Y = scale degrees up: its meow contour into zero
 ; page (m0l..ms1); X = the meow kind. Uses mw, stmp
@@ -771,6 +920,9 @@ contour sty mw
         lda twtone,x
         sta mtone
         lda twbend,x
+        .if MEOWFIT
+        jsr bcap                ; (the next meow sooner than this one ends)
+        .endif
         cmp #8
         beq cbend9              ; 8: as made (bit-exact)
         sta cbidx
@@ -807,13 +959,14 @@ cbtry   ldy cbidx               ; the swoop's two halves * bendf / 8...
         lda m0h
         jsr cbchk
         bcc cbend9
-cbless  lda cbidx               ; too wide for the pitch table: a step toward
-        cmp #9                  ; as made, and again
+cbless  lda cbidx               ; too wide for the pitch table: halfway
+        clc                     ; back toward as made (8), and again (at
+        adc #8                  ; most 3 more tries: 16 12 10 9, then as
+        lsr a                   ; made; one at a time was up to 8, ~15000
+        cmp #9                  ; cycles in a frame)
         bcc cbold
-        dec cbidx
-        lda cbidx
-        cmp #8
-        bne cbtry
+        sta cbidx
+        jmp cbtry
 cbold   lda cb_d0               ; the swoop as made
         sta md0
         lda cb_d1
@@ -1023,6 +1176,9 @@ bnt      .byte 0          ; bassnote: the note
 bnc      .byte 0          ; bassnote: scale steps still to go
 harmony  .byte 0          ; SID 2's harmony meow: scale degrees up, 0 = off
 mute     .byte 0, 0, 0    ; a cat muted (drums, bass, singer): not played
+; the working copy of the open slot: song, tweaks, sname in a row, laid out
+; as a slot in slotmem is (slots.asm scopy moves it in one go)
+song     .fill SONGLEN
 ; the song's sound settings, 16 bytes, saved with it (disk.asm format 4);
 ; a style sets them (styles.py -> stytweak, 16 bytes a style)
 tweaks
@@ -1041,9 +1197,10 @@ tflags   .byte 0              ; bit 0: Meowize (the bass through the meows' filt
                           ; - 3 (Newborn): levels 0 2 6 8 (sfx.asm getlvl)
 TWLEN    = * - tweaks
         .cerror TWLEN != 16, "the tweaks block is 16 bytes"
+sname    .fill SNAMEL     ; the open slot's name (length 0: the style's; slots.asm)
+        .cerror tweaks != song + SONGLEN, "song, tweaks, sname: a slot's layout"
 hist     .fill 32         ; SID 2's echoes: the singer's last 32 steps
 hpos     .byte 0          ; ...this step's
 hstep    .byte 0          ; trig_sing: the singer's step byte
 ckind    .byte 0          ; contour: the meow kind
 e2i      .byte 0          ; echo2step: 0 the first echo, 1 the second
-song     .fill SONGLEN

@@ -9,7 +9,7 @@ drums, Paw McCatney on bass and Mick Jaguar, who sings in meows.
 **[Website](https://illobo.github.io/catsynth64/)** ·
 **[Tutorial](https://illobo.github.io/catsynth64/tutorial.html)** ·
 **[Manual](https://illobo.github.io/catsynth64/manual.html)** ·
-**[Download the disk](https://illobo.github.io/catsynth64/download/catsynth64-1.0.d64)**
+**[Download the disk](https://illobo.github.io/catsynth64/download/catsynth64-1.2.d64)**
 
 - Ten styles, from dancehall and dub to acid, disco and Neko Trap, each with
   its own kit, bass sound, scale and four-bar song.
@@ -27,7 +27,7 @@ drums, Paw McCatney on bass and Mick Jaguar, who sings in meows.
   delete; ten techno songs on the disk.
 
 Runs on a PAL Commodore 64, a C64 Ultimate / Ultimate 64 and in VICE
-(x64sc). Version 1.0, 2026.
+(x64sc). Version 1.2, 2026.
 
 ## Building
 
