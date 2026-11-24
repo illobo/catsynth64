@@ -581,11 +581,10 @@ THE DRUMS PAGE
 
 On the right is one box:
 
-  [ ] BEAT PULSE  ticked at first: every kick, boom, snare, bap and
-                  clap lights the screen's border for a moment in
-                  that sound's colour on the matrix, then it fades
-                  back. Untick it for a calm border. It is not saved
-                  with the songs.
+  [ ] BEAT PULSE  off at first. Tick it and every kick, boom, snare,
+                  bap and clap lights the screen's border for a moment
+                  in that sound's colour on the matrix, then it fades
+                  back. It is not saved with the songs.
 
 The drums have no Level. A drum hit is nearly all attack, and the
 softer held note that turns the other cats down does next to nothing

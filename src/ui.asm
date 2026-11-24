@@ -1877,7 +1877,7 @@ ti_meow .for k = 0, k < 4, k += 1
         #titem 20, 3, 12, TF_SIZE, tflags, 1, 3, 0, tl_csize
 ti_drum #titem 16, 2, 13, TF_NUM, twside, 2, 8, 0, tl_side
         #titem 18, 2, 13, TF_NUM, twtune, 0, 16, 8, tl_tune
-        #titem 16, 25, 23, TF_BOX, bpulse, 3, 1, 1, tl_pulse
+        #titem 16, 25, 23, TF_BOX, bpulse, 3, 1, 0, tl_pulse
 ti_bass #titem 15, 2, 13, TF_LVL, twside, 1, 8, 0, tl_level
         #titem 17, 2, 13, TF_DELAY, btweak, 1, 7, 0, tl_delay
         #titem 17, 25, 23, TF_BOX, tflags, 5, 1, 0, tl_dubf
@@ -3528,7 +3528,7 @@ uifont  .binary "../gen/uifont.bin"
 ; the main screen (the title's bars use the border): pulse_frame runs from
 ; the main loop.
 PULSELEN = 5
-bpulse  .byte 1                 ; the box (1: on)
+bpulse  .byte 0                 ; the box (1: on; off at first)
 ptime   .byte 0                 ; frames left
 pcol    .byte 0                 ; the hit's colour
 
