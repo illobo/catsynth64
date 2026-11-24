@@ -72,6 +72,7 @@ main { min-width: 0; max-width: 72ch; }
 section.chapter { padding-top: 32px; border-top: 3px solid var(--ink); margin-top: 48px; }
 section.chapter:first-of-type { margin-top: 0; }
 .chap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; align-items: end; margin-bottom: 20px; }
+.chap.nonum { grid-template-columns: minmax(0, 1fr); }
 .chap .num { font: 900 88px/.8 var(--font-head); color: var(--rule); }
 .chap .num.l1{color:var(--l1)} .chap .num.l2{color:var(--l2)} .chap .num.l3{color:var(--l3)}
 .chap .num.l4{color:var(--l4)} .chap .num.l5{color:var(--l5)}
@@ -118,7 +119,7 @@ footer { max-width: 1060px; margin: 48px auto 0; color: var(--ink-soft); font-si
 </header>
 <div class="wrap single"><main>
 <section class="chapter" id="what">
-  <div class="chap"><div class="num l1">&#9834;</div><div><div class="lbl">Meet the band</div><h2>What is it?</h2></div></div>
+  <div class="chap nonum"><div><div class="lbl">Meet the band</div><h2>What is it?</h2></div></div>
   <p>Three cats play in a band on your Commodore 64. Choose one of ten styles and they start playing. Then make the
   song yours: click a step to add a drum, a bass note or a meow. Every meow lands on a note of the song's scale, so
   the singer is never out of tune. Chain bars into a song, play the pads live, record into the loop and save your
@@ -128,21 +129,21 @@ footer { max-width: 1060px; margin: 48px auto 0; color: var(--ink-soft); font-si
   <div class="shots"><figure class="shot"><img src="img/drums.png" alt="The drum matrix playing neko trap" width="768" height="544" loading="lazy"><figcaption>The drums: two sounds a row, left and right button.</figcaption></figure><figure class="shot"><img src="img/bass.png" alt="The bass matrix: notes on rows, a slide" width="768" height="544" loading="lazy"><figcaption>The bass: notes, lengths and slides.</figcaption></figure><figure class="shot"><img src="img/meows.png" alt="The meows: a melody of cat marks" width="768" height="544" loading="lazy"><figcaption>The meows: always in key.</figcaption></figure><figure class="shot"><img src="img/meowpage.png" alt="The Meows page" width="768" height="544" loading="lazy"><figcaption>Bend, Vowel, Tone and Cat Size.</figcaption></figure><figure class="shot"><img src="img/basspage.png" alt="The Bass page" width="768" height="544" loading="lazy"><figcaption>Level, a dub delay, Meowize and an acid squelch.</figcaption></figure><figure class="shot"><img src="img/styles.png" alt="The style list" width="768" height="544" loading="lazy"><figcaption>Any song with any style's sounds.</figcaption></figure><figure class="shot"><img src="img/disk.png" alt="The disk page" width="768" height="544" loading="lazy"><figcaption>Your songs on disk, by name.</figcaption></figure><figure class="shot"><img src="img/help.png" alt="The help card" width="768" height="544" loading="lazy"><figcaption>Every key on one card (RUN/STOP).</figcaption></figure></div>
 </section>
 <section class="chapter" id="features">
-  <div class="chap"><div class="num l2">10</div><div><div class="lbl">At a glance</div><h2>What it can do</h2></div></div>
+  <div class="chap nonum"><div><div class="lbl">At a glance</div><h2>What it can do</h2></div></div>
   <div class="table-wrap"><table><tr><td><b>3 cats</b></td><td>drums (14 sounds, two a row: the left and right mouse buttons), bass and meows</td></tr><tr><td><b>10 styles</b></td><td>dancehall, roots, steppers, ska, bossa, disco, funk, Neko Trap, acid and a blues shuffle, each with its own kit, bass, scale and a four-bar song</td></tr><tr><td><b>10 slots</b></td><td>ten songs in memory on the keys 1 to 0, switched on the bar line; <kbd>SHIFT</kbd>+<kbd>1-0</kbd> plays a song with another style's sounds</td></tr><tr><td><b>Mouse</b></td><td>a 1351 mouse in port 1 (a USB mouse on the C64 Ultimate); a joystick in port 2 moves the pointer too</td></tr><tr><td><b>Songs</b></td><td>four bars A to D and a chain of up to 16 bars</td></tr><tr><td><b>Settings</b></td><td>Bend, Vowel and Tone for each meow, Cat Size, a sidechain, the kit's tune, the bass's level and wave, Meowize, an acid squelch and a dub filter</td></tr><tr><td><b>Live</b></td><td>the keyboard as pads, and a looper</td></tr><tr><td><b>Second SID</b></td><td>dub echoes, a harmony singer and a bass delay</td></tr><tr><td><b>Disk</b></td><td>a directory, names, load, save, delete, and ten techno songs to start from</td></tr></table></div>
 </section>
 <section class="chapter" id="start">
-  <div class="chap"><div class="num l3">3</div><div><div class="lbl">Start here</div><h2>Your first song</h2></div></div>
+  <div class="chap nonum"><div><div class="lbl">Start here</div><h2>Your first song</h2></div></div>
   <p>The tutorial makes your first song in ten minutes; the manual tells you everything else.</p>
   <div class="buttons"><a class="button" href="tutorial.html">The tutorial</a>
   <a class="button alt" href="manual.html">The manual</a></div>
   <div class="box try"><b>Play it here</b><p>The <a href="play/">browser version</a> runs CatSynth 64 in an
   emulator. Best with a keyboard and a mouse: click the screen and move the mouse, and the cat paw pointer follows.
   <kbd>SPACE</kbd> plays and stops, <kbd>1</kbd> to <kbd>0</kbd> choose a song: in the browser the ten slots hold
-  the ten techno songs (New &rarr; Defaults on the disk page brings the styles' songs back).</p></div>
+  the ten techno songs (New, then Defaults, on the disk page brings the styles' songs back).</p></div>
 </section>
 <section class="chapter" id="get">
-  <div class="chap"><div class="num l4">&darr;</div><div><div class="lbl">Download</div><h2>Get it</h2></div></div>
+  <div class="chap nonum"><div><div class="lbl">Download</div><h2>Get it</h2></div></div>
   <p>It runs on a real Commodore 64 (PAL), on a C64 Ultimate or an Ultimate 64, and in the VICE emulator.</p>
   <div class="table-wrap"><table>
     <tr><td><a href="download/catsynth64-1.0.d64">catsynth64-1.0.d64</a></td><td>the disk: the program and ten techno songs</td></tr>

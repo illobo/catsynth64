@@ -72,6 +72,7 @@ main { min-width: 0; max-width: 72ch; }
 section.chapter { padding-top: 32px; border-top: 3px solid var(--ink); margin-top: 48px; }
 section.chapter:first-of-type { margin-top: 0; }
 .chap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; align-items: end; margin-bottom: 20px; }
+.chap.nonum { grid-template-columns: minmax(0, 1fr); }
 .chap .num { font: 900 88px/.8 var(--font-head); color: var(--rule); }
 .chap .num.l1{color:var(--l1)} .chap .num.l2{color:var(--l2)} .chap .num.l3{color:var(--l3)}
 .chap .num.l4{color:var(--l4)} .chap .num.l5{color:var(--l5)}

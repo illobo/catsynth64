@@ -26,9 +26,9 @@
     background: #000; font-size: 13px; letter-spacing: .02em; }
   .hint kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin: 0 2px; border: 1px solid var(--c64-light);
     border-bottom-width: 3px; border-radius: 4px; color: var(--ink); font: inherit; text-align: center; }
-  .btn { position: absolute; z-index: 3; top: calc(10px + env(safe-area-inset-top)); width: 40px; height: 40px; border: 0;
-    border-radius: 50%; background: rgba(53, 40, 121, .85); color: var(--ink); font-size: 20px; line-height: 40px;
-    cursor: pointer; }
+  .btn { position: absolute; z-index: 3; top: calc(10px + env(safe-area-inset-top)); height: 32px; padding: 0 14px;
+    border: 0; border-radius: 16px; background: rgba(53, 40, 121, .85); color: var(--ink);
+    font: 700 12px/32px ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .1em; cursor: pointer; }
   .close { right: calc(10px + env(safe-area-inset-right)); }
   .sound { left: calc(10px + env(safe-area-inset-left)); }
   .sound.off { color: var(--hint); text-decoration: line-through; }
@@ -48,8 +48,8 @@
     &middot; arrows + <kbd>Return</kbd> edit &middot; <kbd>Esc</kbd> RUN/STOP (help, back) &middot;
     <a href="../tutorial.html" style="color:inherit">tutorial</a></p>
 </div>
-<button class="btn close" type="button" aria-label="Back to the website">&#x2715;</button>
-<button class="btn sound" type="button" aria-label="Sound on / off" aria-pressed="false">&#x266a;</button>
+<button class="btn close" type="button" aria-label="Back to the website">BACK</button>
+<button class="btn sound" type="button" aria-label="Sound on / off" aria-pressed="false">SOUND</button>
 <script>
 (function () {
   'use strict';
