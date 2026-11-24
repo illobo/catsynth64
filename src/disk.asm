@@ -5,9 +5,10 @@
 ; with dk_enter / dk_status / dk_leave too.
 ; The includer defines `song` (the 213-byte block below), `tweaks` (the
 ; 16-byte sound settings outside the song block, seq.asm: twbend[4],
-; twvowel[4], twtone[4] 0-16 (8 = as made), twside (Sidechain 0-8),
-; twtune (0-16, 8 = as made), btweak (Delay << 4 0-7 | Wave 0-3), tflags
-; (bit 0 Meowize)) and NSTYLES.
+; twvowel[4], twtone[4] 0-16 (8 = as made), twside (bass Level << 4 0-8 |
+; Sidechain 0-8), twtune (0-16, 8 = as made), btweak (Delay << 4 0-7 | Wave
+; 0-3), tflags (bits 0-2 Meowize, Res boost, Dub filter; Cat Size << 4 0-3))
+; and NSTYLES.
 ;
 ; The song block (seq.asm):
 ;   song+0 style  +1 tempo  +2 swing  +3 esteps  +4 chainlen  +5 chain[16]
@@ -19,9 +20,9 @@
 ;   bass, s0 singer, s1 drums, ...) a 16-bit step mask (bit n: step n is
 ;   not 0; low byte first) followed by the non-zero step bytes in step
 ;   order. An empty row is 2 zero bytes.
-;   A version 5 file with Bend, Vowel, Tone or Tune over 16, Sidechain over
-;   8, btweak's high nibble over 7 or low over 3, or bad tflags bits is
-;   bad.
+;   A version 5 file with Bend, Vowel, Tone or Tune over 16, Sidechain or
+;   the bass Level over 8, btweak's high nibble over 7 or low over 3, or bad
+;   tflags bits (3, 6, 7) is bad.
 ;   Version 4 had 9 tweak bytes (packed: 4 x Bend << 4 | Vowel, Tone0 << 4
 ;   | Tone1, Tone2 << 4 | Tone3, dtweak (Sidechain << 4 | Tune, 0-7 each,
 ;   Tune 4 as made, 1/8 steps), btweak, tflags): the nibbles load as they
@@ -102,8 +103,8 @@
 ; disk_loadn, disk_scratch, disk_setname, disk_buf,
 ; disk_len, disk_err, disk_st, disk_dos, disk_bank, DE_*, DK_*, dk_*, K_*.
 
-DK_SONGLEN  = 213
-DK_HDR  = 21
+DK_SONGLEN  = 213               ; the song block: the header, 192 step bytes
+DK_HDR  = 21                    ; song+0..+20 (style ... chain[16])
 DK_TWLEN = 16                   ; `tweaks` in memory
 DK_TW   = DK_TWLEN              ; ...in the file (version 5, raw)
 DK_TW4  = 9                     ; the tweak bytes of version 4
@@ -114,29 +115,30 @@ DK_PACKMAX  = DK_ROWS + 12*18  ; 256 (a length byte of 0 means 256)
 DK_MINLEN = 3 + DK_HDR + 24     ; the shortest file (v1/v2, 12 empty rows)
 DISK_DEV = 8
 
-DE_BADFILE = $10
-DE_DRIVE   = $11
+DE_BADFILE = $10                ; disk_err: not a song (or too long)
+DE_DRIVE   = $11                ; ...the drive said no (disk_dos)
 
-K_SETLFS = $ffba
-K_SETNAM = $ffbd
-K_OPEN   = $ffc0
-K_CLOSE  = $ffc3
-K_CHKIN  = $ffc6
-K_CLRCHN = $ffcc
-K_CHRIN  = $ffcf
-K_LOAD   = $ffd5
-K_SAVE   = $ffd8
+; the KERNAL's jump table
+K_SETLFS = $ffba                ; A = file no., X = device, Y = secondary
+K_SETNAM = $ffbd                ; A = name length, X/Y = its address
+K_OPEN   = $ffc0                ; C set: error, A = its number
+K_CLOSE  = $ffc3                ; A = file no.
+K_CHKIN  = $ffc6                ; X = file no.: CHRIN reads from it
+K_CLRCHN = $ffcc                ; back to the keyboard / screen
+K_CHRIN  = $ffcf                ; A = the next byte; $90 says how it went
+K_SAVE   = $ffd8                ; A = zp pointer to the start, X/Y = end + 1
 
 DK_PTR   = $fb                  ; SAVE's start pointer (only while in the KERNAL)
 
 ; ------------------------------------------------------------------ pack
+; song, tweaks -> disk_buf (the packed form above). Out: A = disk_len
 song_pack
-        ldx #2
+        ldx #2                  ; "CS", the version
 -       lda dk_magic,x
         sta disk_buf,x
         dex
         bpl -
-        ldx #DK_HDR-1
+        ldx #DK_HDR-1           ; the header as it is
 -       lda song,x
         sta disk_buf+3,x
         dex
@@ -161,8 +163,8 @@ pk_step lda song+DK_HDR,x
         inx
         txa
         and #15
-        bne pk_step
-        sty dk_t
+        bne pk_step             ; (16 steps a row)
+        sty dk_t                ; the row's mask into its place
         ldy dk_mpos
         lda dk_mlo
         sta disk_buf,y
@@ -171,11 +173,12 @@ pk_step lda song+DK_HDR,x
         ldy dk_t
         cpx #192
         bne pk_row
-        sty disk_len
+        sty disk_len            ; (256 bytes at most: Y wraps to 0)
         tya
         rts
 
 ; ------------------------------------------------------------------ unpack
+; disk_buf (A = its length, 0: 256) -> song, tweaks; C set: bad (see above)
 up_bad0 sec
         rts
 song_unpack
@@ -198,7 +201,7 @@ song_unpack
         and #$0f
         cmp #NSTYLES
         bcs up_bad0
-        lda disk_buf+3
+        lda disk_buf+3          ; (the mode: bit 7 clear)
         cmp #$80
         bcs up_bad0
         lda disk_buf+4          ; tempo 4..15
@@ -223,7 +226,7 @@ song_unpack
         sta dk_tmp+5,x
         dex
         bpl -
-        ldx #4
+        ldx #4                  ; song+0..+4 (chain[] went above)
 -       lda disk_buf+3,x
         sta dk_tmp,x
         dex
@@ -236,7 +239,7 @@ up_rows stx dk_t                ; dk_rem: the row bytes (the length - X;
         sec
         sbc dk_t
         sta dk_rem
-        ldy #0                  ; Y: step of the 192
+        ldy #0                  ; Y: step of the 192, X: in
 up_row  lda dk_rem              ; the mask must be inside
         cmp #2
         bcc up_bad2
@@ -271,7 +274,7 @@ up_step lsr dk_mhi              ; C = step's bit, step 0 first
         bne up_copy
         ldx #DK_HDR             ; X: slot s's drum row, s*48 on
 up_cvrow
-        lda #16
+        lda #16                 ; dk_t: the row's 16 steps
         sta dk_t
 up_cv   ldy dk_tmp,x
         lda #0
@@ -290,7 +293,7 @@ up_cv   ldy dk_tmp,x
         tax
         cpx #DK_HDR+192
         bcc up_cvrow
-up_copy ldx #0
+up_copy ldx #0                  ; all good: the scratch copy is the song
 -       lda dk_tmp,x
         sta song,x
         inx
@@ -314,13 +317,13 @@ up_tw   ldx #DK_TWLEN-1         ; as made, then the file's
         dex
         bpl -
         ldx #3+DK_HDR           ; X: in (v1/v2: no tweak bytes)
-        lda disk_buf+2
+        lda disk_buf+2          ; the version
         cmp #3
         bcc up_twok
         bne up_v45
 up_v3   ldx #DK_TW3-1           ; v3: Bend << 4 | Vowel, 0-7 (factor n/4)
 -       lda disk_buf+DK_TWPOS,x ; -> 0-16 (dk_v3map)
-        and #$88
+        and #$88                ; (a nibble over 7)
         bne up_bad1
         lda disk_buf+DK_TWPOS,x
         lsr a
@@ -355,13 +358,13 @@ up_v45  cmp #4
         and #$8c
         bne up_bad1
         lda disk_buf+DK_TWPOS+15 ; tflags: bits 0-2 (Meowize, Res boost,
-        and #$08                ; Dub filter), bits 4-7 the Cat Size 0-3
+        and #$08                ; Dub filter), bits 4-5 the Cat Size 0-3
         bne up_bad1
-        lda disk_buf+DK_TWPOS+15
+        lda disk_buf+DK_TWPOS+15 ; (bits 6-7 clear)
         cmp #$40
         bcs up_bad1
         lda disk_buf+DK_TWPOS+12 ; twside: Sidechain 0-8, the bass's Level 0-8
-        cmp #$90
+        cmp #$90                ; (the Level, high nibble; dk_twlim let it be)
         bcs up_bad1
         and #$0f
         cmp #9
@@ -435,6 +438,8 @@ up_15   cmp #15                 ; v4's 0-15 scale -> 0-16: 15 is 16 now
         lda #16
 +       rts
 ; ------------------------------------------------------------------ save
+; disk_save: A = slot ("CATSONGn"); disk_saven: the name set (disk_setname).
+; Out: C, A = disk_err (see above)
 disk_save
         jsr dk_slot
 disk_saven
@@ -445,8 +450,8 @@ disk_saven
         bcs dk_kerr
 
         jsr dk_setname
-        lda #1
-        ldx #DISK_DEV
+        lda #1                  ; file 1, drive 8, secondary 0 (SAVE: the
+        ldx #DISK_DEV           ; start address goes first)
         ldy #0
         jsr K_SETLFS
         lda #<disk_buf
@@ -465,11 +470,11 @@ disk_saven
 +
         lda #DK_PTR
         jsr K_SAVE
-        ldx $90
+        ldx $90                 ; ST
         stx disk_st
         bcs dk_kerr
         txa
-        bmi dk_dnp
+        bmi dk_dnp              ; (bit 7: device not present)
         jsr dk_status
         bcs dk_kerr
         lda disk_dos
@@ -480,8 +485,8 @@ disk_saven
 ; "S0:name" on the command channel, then the drive's status (01 files
 ; scratched, also when there was none). C = 1, A = KERNAL error.
 dk_scratch
-        lda dk_nlen
-        clc
+        lda dk_nlen             ; "S0:" + the name: the command, sent as the
+        clc                     ; command channel's file name by OPEN
         adc #3
         ldx #<dk_cmd
         ldy #>dk_cmd
@@ -492,23 +497,25 @@ dk_scratch
         lda #15
         jsr K_CLOSE
         lda $90
-        bmi dk_scnp
+        bmi dk_scnp             ; (device not present)
         jmp dk_status           ; "01, FILES SCRATCHED"
 dk_scnp lda #5
         sec
 +       rts
 
-; delete the file named (disk_setname)
+; delete the file named (disk_setname). Out: C, A = disk_err
 disk_scratch
         jsr dk_clr
         jsr dk_enter
         jsr dk_scratch
         bcs dk_kerr
         lda disk_dos
-        cmp #20
+        cmp #20                 ; (01 files scratched is fine)
         bcs dk_drverr
         jmp dk_ok
 
+; the common exits (also from diskui.asm's dir_read): dk_leave, then
+; disk_err and C set as the routines above say
 dk_kerr sta disk_err            ; A = KERNAL error
         jsr dk_leave
         lda disk_err
@@ -535,20 +542,22 @@ dk_ok   lda #0
 ; Not the KERNAL's LOAD: OPEN (secondary 0, the LOAD channel) and CHRIN, at
 ; most DK_PACKMAX bytes after the load address, so a foreign file of that
 ; name cannot overwrite what follows disk_buf (a longer one is a bad file).
+; disk_load: A = slot ("CATSONGn"); disk_loadn: the name set. Out: C, A =
+; disk_err; the song and tweaks changed only on C clear
 disk_load
         jsr dk_slot
 disk_loadn
         jsr dk_clr
         jsr dk_enter
         jsr dk_setname
-        lda #2
+        lda #2                  ; file 2, drive 8, secondary 0
         ldx #DISK_DEV
         ldy #0
         jsr K_SETLFS
         jsr K_OPEN
         bcs dk_kerr
         lda $90
-        bpl +
+        bpl +                   ; (bit 7: device not present)
         lda #2
         jsr K_CLOSE
         jmp dk_dnp
@@ -569,7 +578,7 @@ disk_loadn
         sta disk_st
         bne dk_lclose           ; (already the end, or an error)
 -       jsr K_CHRIN
-        ldx $90
+        ldx $90                 ; ST: bit 6 the last byte, others errors
         stx disk_st
         ldx dk_full
         beq +
@@ -595,7 +604,7 @@ dk_lclose
 +       lda disk_dos
         cmp #20
         bcs dk_lderr
-        lda dk_long
+        lda dk_long             ; (too long: a bad file, whatever ST says)
         bne +
         lda disk_st             ; serial errors other than EOF
         and #$bf
@@ -634,6 +643,7 @@ dk_slot and #15                 ; A = slot: "CATSONGn"
         sta dk_nlen
         rts
 
+; disk_dos, disk_st cleared (no answer yet)
 dk_clr  lda #0
         sta disk_dos
         sta disk_st
@@ -642,26 +652,28 @@ dk_clr  lda #0
 ; X/Y = a file name (PETSCII), A = its length (1-16): the name for
 ; disk_saven, disk_loadn and disk_scratch
 disk_setname
-        stx dk_snl+1
+        stx dk_snl+1            ; (the address patched into dk_snl)
         sty dk_snl+2
-        cmp #17
+        cmp #17                 ; at most 16
         bcc +
         lda #16
 +       sta dk_nlen
         tax
         dex
-dk_snl  lda $ffff,x
+dk_snl  lda $ffff,x             ; after "S0:" in dk_cmd
         sta dk_cmd+3,x
         dex
         bpl dk_snl
         rts
 
+; SETNAM: the name (dk_cmd+3, past "S0:")
 dk_setname
         lda dk_nlen             ; the name
         ldx #<dk_cmd+3
         ldy #>dk_cmd+3
         jmp K_SETNAM
 
+; SETLFS: file 15, drive 8, secondary 15 (the command / status channel)
 dk_lfs15
         lda #15
         ldx #DISK_DEV
@@ -680,9 +692,9 @@ dk_status
         ldx #15
         jsr K_CHKIN
         bcs dk_st8
-        jsr K_CHRIN             ; tens
+        jsr K_CHRIN             ; tens (ASCII "0"-"9": the low nibble)
         and #15
-        asl a
+        asl a                   ; * 10: * 2 + * 8
         sta dk_t
         asl a
         asl a
@@ -693,8 +705,8 @@ dk_status
         clc
         adc dk_t
         sta disk_dos
-        lda $90                 ; timeout / no device
-        and #$83
+        lda $90                 ; timeout / no device (ST bits 0, 1, 7); the
+        and #$83                ; rest of the message is not read: CLOSE
         php
         jsr K_CLRCHN
         lda #15
@@ -713,6 +725,7 @@ dk_st8  pha
         sec
 dk_st9  rts
 
+; before the KERNAL calls: the machine saved and set up as above (A, X)
 dk_enter
         sei
         ldx #2                  ; zero page $02-$ff
@@ -724,7 +737,7 @@ dk_enter
         sta dk_p00
         lda $01
         sta dk_p01
-        lda #$2f
+        lda #$2f                ; the CPU port's directions, as at reset
         sta $00
         lda #$36                ; KERNAL, I/O (no BASIC: the program goes on
         sta $01                 ; past $a000, and the KERNAL doesn't need it)
@@ -747,12 +760,13 @@ dk_enter
         sta $98
         sta $99
         sta $9d
-        lda #3
+        lda #3                  ; output: the screen
         sta $9a
         lda #$ff
         sta $91
         rts
 
+; after them: all put back (keeps nothing; disk_bank set). Interrupts off
 dk_leave
         sei
         lda $dd00
@@ -774,8 +788,8 @@ dk_leave
         sta $01
         lda dk_d015
         sta $d015
-        lda dk_d011
-        and #$7f
+        lda dk_d011             ; (bit 7 as read was the raster's bit 8, not
+        and #$7f                ; the caller's compare value: 0)
         sta $d011
         rts
 
@@ -794,20 +808,22 @@ dk_cmd  .byte $53, $30, $3a     ; "S0:" and the name, PETSCII (unshifted)
         .fill 16, $20
 dk_nlen .byte 8
 dk_catsong .byte $43, $41, $54, $53, $4f, $4e, $47      ; "CATSONG"
-dk_long .byte 0
+dk_long .byte 0                 ; the loader: a byte past 256 came
 dk_full .byte 0                 ; the loader: 256 bytes are in
 dk_rem  .byte 0                 ; song_unpack: the row bytes still to come
 
-disk_err  .byte 0
+disk_err  .byte 0               ; (the outputs: see the top)
 disk_st   .byte 0
 disk_dos  .byte 0
 disk_bank .byte 0
 disk_len  .byte 0
-dk_mlo  .byte 0
+dk_mlo  .byte 0                 ; a row's step mask
 dk_mhi  .byte 0
-dk_mpos .byte 0
-dk_t    .byte 0
-dk_end  .byte 0
+dk_mpos .byte 0                 ; song_pack: where the row's mask goes
+dk_t    .byte 0                 ; a scratch
+dk_end  .byte 0                 ; the loader: bytes read (Y)
+                                ; the caller's $00, $01, $d011, $d015,
+                                ; $dd00, $dd02 (dk_enter / dk_leave)
 dk_p00  .byte 0
 dk_p01  .byte 0
 dk_d011 .byte 0

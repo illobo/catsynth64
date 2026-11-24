@@ -134,9 +134,9 @@ screen_init
         and #$fc                ; %00: bank 3
         sta $dd00
         lda #((SCR_SCREEN & $3c00) >> 6) | ((SCR_CHARSET & $3800) >> 10)
-        sta $d018
+        sta $d018               ; screen (bits 4-7), charset (bits 1-3) in the bank
         lda #$08
-        sta $d016
+        sta $d016               ; 40 columns, no multicolour, no fine scroll
         lda #SCR_WALL_BG
         sta $d020
         sta $d021
@@ -147,7 +147,7 @@ screen_init
         sei                     ; so no IRQ may run meanwhile
         lda $01
         pha
-        and #$fb
+        and #$fb                ; CHAREN (bit 2) 0: the ROM at $d000-$dfff
         sta $01
         ldx #0
 -       .for o = 0, o < $400, o += $100
@@ -164,7 +164,7 @@ screen_init
         sta SCR_CHARSET,x
         lda scr_font+$100,x
         sta SCR_CHARSET+$100,x
-        cpx #26*8
+        cpx #26*8               ; (26 capitals, 8 bytes each)
         bcs +
         lda scr_fontuc,x
         sta SCR_CHARSET+$41*8,x
@@ -192,11 +192,11 @@ SCR_SPRLEN = SCR_NBLOCKS * 64   ; the sprites: exactly, the rest stays free
 -       lda scr_sprdata+(SCR_SPRLEN & $ff00),x
         sta SCR_SPRITES+(SCR_SPRLEN & $ff00),x
         dex
-        cpx #$ff
+        cpx #$ff                ; (down to 0, inclusive)
         bne -
         .fi
 
-        lda #<scr_rscreen
+        lda #<scr_rscreen       ; the stage and panel: codes, then colours
         ldx #>scr_rscreen
         ldy #>SCR_SCREEN
         jsr scr_unrle
@@ -225,22 +225,22 @@ SCR_SPRLEN = SCR_NBLOCKS * 64   ; the sprites: exactly, the rest stays free
         dex
         bpl -
         lda #SCR_SXHI
-        sta $d010
+        sta $d010               ; X bit 8 of each
         lda #SCR_SMC
-        sta $d01c
+        sta $d01c               ; multicolour
         lda #SCR_SXEXP
-        sta $d01d
+        sta $d01d               ; double width
         lda #0
-        sta $d017
+        sta $d017               ; no double height
         sta $d01b               ; in front of the characters
         lda #SCR_MC0
-        sta $d025
+        sta $d025               ; the shared colours 0, 1
         lda #SCR_MC1
         sta $d026
         jsr scr_spr
         lda #$ff
-        sta $d015
-        lda #$1b
+        sta $d015               ; all 8 on
+        lda #$1b                ; screen on: 25 rows, text, Y scroll 3
         sta $d011
         rts
 
@@ -272,7 +272,7 @@ stage_cycle
         bcc +
         ldx #0
 +       stx scr_phase
-        .for c = 0, c < 3, c += 1
+        .for c = 0, c < 3, c += 1   ; cat c: palette phase + c (wrapped), * 8
         txa
         .if c > 0
         clc
@@ -316,6 +316,7 @@ scrled  lda #0                  ; off: black
         sta SCR_COLRAM+SCR_BEAT_LED
         rts
 
+; once a frame (see the API above): sprites, fading lights, a cat redrawn
 screen_frame
         jsr scr_spr
         .for c = 0, c < 3, c += 1   ; a fading light: a step down its ramp
@@ -327,7 +328,7 @@ screen_frame
         tax                     ; X = level (the meters)
         ora scr_pal+c           ; Y = palette * 8 + level
         tay
-        jsr [scr_lit0, scr_lit1, scr_lit2][c]
+        jsr [scr_lit0, scr_lit1, scr_lit2][c]   ; its colour RAM (screen.inc)
 +
         .next
         lda #3                  ; then the characters: the cat after the
@@ -343,10 +344,10 @@ screen_frame
         tay
         lda scr_cfr,y
         cmp scr_shown,x
-        bne +
+        bne +                   ; changed: draw it
         dec scr_n
         bne -
-        rts
+        rts                     ; (all three as shown)
 +       stx scr_rr
         ; fall through
 
@@ -365,9 +366,9 @@ scr_cat sta scr_shown,x
         sta scr_cp
         lda scr_cboxhi,x
         sta scr_cp+1
-        lda scr_rows,x
+        lda scr_rows,x          ; (the rows its frames differ in)
         sta scr_n
-scrrow  ldy #15                 ; a row: 8 colours at 8-15, through scr_cp
+scrrow  ldy #15                ; a row: 8 colours at 8-15, through scr_cp
 -       lda (scr_fp),y          ; (8 bytes back) so one index serves both
         sta (scr_cp),y
         dey
@@ -377,7 +378,7 @@ scrrow  ldy #15                 ; a row: 8 colours at 8-15, through scr_cp
         sta (scr_sp),y
         dey
         bpl -
-        lda scr_fp
+        lda scr_fp              ; the next row: 16 bytes of frame, 40 of screen
         clc
         adc #16
         sta scr_fp
@@ -401,15 +402,15 @@ scrrow  ldy #15                 ; a row: 8 colours at 8-15, through scr_cp
 
 ; every sprite: the block and colour of its cat's pose (about 330 cycles)
 scr_spr ldx #7
--       ldy scr_sown,x
+-       ldy scr_sown,x          ; (the cat it belongs to)
         lda scr_req,y
         clc
         adc scr_snp,x           ; sprite*SCR_NPOSE + pose
         tay
         lda scr_sptr,y
-        sta SCR_SCREEN+$3f8,x
+        sta SCR_SCREEN+$3f8,x   ; its pointer (block number)
         lda scr_scol,y
-        sta $d027,x
+        sta $d027,x             ; its colour
         dex
         bpl -
         rts
@@ -439,9 +440,10 @@ scrrun  lda (scr_fp),y          ; (Y = 0 here)
         sta scr_fp
         bcc scrrun
         inc scr_fp+1
-        bne scrrun
+        bne scrrun              ; (always)
 scrrts  rts
 
+; each cat's box (top left), drum/bass/singer: screen and colour RAM (8 back)
 SCR_BOX  = SCR_CAT_ROW * 40 + [SCR_CAT_COL_DRUM, SCR_CAT_COL_BASS, SCR_CAT_COL_SING]
 scr_boxlo  .byte <(SCR_SCREEN + SCR_BOX)
 scr_boxhi  .byte >(SCR_SCREEN + SCR_BOX)

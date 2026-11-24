@@ -12,12 +12,14 @@
 ;   20         "NNN blocks free."
 ;   21         Name: the name to load / save / delete (typed, or the file
 ;              selected), max 16 characters
-;   23         Load  Save  Delete  Dir  Back
-;   24         a hint, a message, or "Overwrite NAME?  Yes  No"
+;   23         Load  Save  Delete  Dir  Back  New
+;   24         a hint, a message, "Overwrite NAME?  Yes  No", or New's
+;              "This slot  All slots  Defaults  No"
 ;
 ; Keys: letters, digits, space, + - . type the name, DEL deletes; CRSR
 ; up/down select a file; RETURN Load, SHIFT+RETURN Save, F1 Dir, F7 Delete,
-; RUN/STOP back. Asking: Y / N (or a click on Yes / No).
+; RUN/STOP back. Asking: Y / N (or a click on Yes / No); New: T / A / D,
+; N or RUN/STOP no.
 ;
 ; The directory: OPEN "$" on drive 8 (secondary 0) and CHRIN (the BASIC
 ; listing: load address, then per line link, blocks, text, 0), parsed by
@@ -35,11 +37,12 @@ DLINE   = 40                    ; a listing line's text kept
 dp      = $fb
 dc      = $fd
 
-K_Y     = 3*8+1
+K_Y     = 3*8+1                 ; (matrix codes, as catsynth.asm's K_*)
 K_D     = 2*8+2
 K_N     = 4*8+7
 
 ; ------------------------------------------------------------------ open / close
+; S, L, the disk icon: the page up and the directory read (once up: nothing)
 disk_open
         lda diskon
         bne +
@@ -49,8 +52,8 @@ disk_open
 
 ; the panel saved, the page drawn (no disk I/O)
 dpage_show
-        ldx #0
--       .for r = 0, r < 520, r += 130
+        ldx #0                  ; rows 12-24 (520 bytes, 4 x 130): screen to
+-       .for r = 0, r < 520, r += 130   ; helpbuf, colours to helpbuf+520
         lda SCR_SCREEN + 12*40 + r,x
         sta helpbuf + r,x
         lda SCR_COLRAM + 12*40 + r,x
@@ -81,7 +84,7 @@ dpage_show
         sta SCR_SCREEN + 22*40
         lda #G_SBR
         sta SCR_SCREEN + 22*40 + 39
-        ldx #13
+        ldx #13                 ; the frame's sides, rows 13-21
 -       jsr drow
         lda #G_V
         ldy #0
@@ -129,6 +132,7 @@ disk_close
         rts
 
 ; ------------------------------------------------------------------ keys
+; once a frame while the page is up (catsynth.asm dispatch): all the keys
 dkeys   lda dstate
         beq dk0
         cmp #3                  ; New?: T this slot, A all, D defaults
@@ -184,8 +188,8 @@ dk0     #pressed K_STOP
 dkcol   lda knew,x
         beq dknext
         stx dkx
-        txa
-        asl a
+        txa                     ; Y = column * 8 + the lowest row bit set
+        asl a                   ; (one key a column a frame)
         asl a
         asl a
         tay
@@ -203,7 +207,7 @@ dknext  dex
 dk9     rts
 dkx     .byte 0
 
-; A = a PETSCII character: onto the name
+; A = a PETSCII character: onto the name (16 at most)
 dtypech ldx nlen
         cpx #16
         bcs +
@@ -212,6 +216,7 @@ dtypech ldx nlen
         jmp dedited
 +       rts
 
+; DEL: the name's last character off
 dbacksp lda nlen
         beq dbs9
         dec nlen
@@ -219,14 +224,14 @@ dedited lda dsel                ; edited: no file selected
         jsr dmarkf
         lda #$ff
         sta dsel
-        lda dmask+1
+        lda dmask+1             ; the name redrawn
         ora #1
         sta dmask+1
         rts
 dbs9    rts
 
 ; the C64's keys (column * 8 + row) as PETSCII for a name; 0: none
-keypet  .byte 0, 0, 0, 0, 0, 0, 0, 0
+keypet  .byte 0, 0, 0, 0, 0, 0, 0, 0    ; (column 0: DEL, RETURN, CRSR, F keys)
         .text "3wa4zse", 0      ; (64tass -a: lower case = PETSCII $41-$5a)
         .text "5rd6cftx"
         .text "7yg8bhuv"
@@ -241,7 +246,7 @@ dclick  lda dstate
         beq dc0
         cmp #3                  ; New?: This slot (6-15), All slots (17-26),
         bne dcyn                ; Defaults (28-35), else no
-        cpy #24
+        cpy #24                 ; (row 24 only)
         bne dcnno
         cpx #6
         bcc dcnno
@@ -267,7 +272,7 @@ dcyn    cpy #24                 ; asking: Yes (29-33), No (34-38), else no
         bcs +
         jmp dyes
 +       jmp dno
-dc0     cpy #23
+dc0     cpy #23                 ; browsing: row 23, the buttons
         bne dc2
         ldy #NBTN-1             ; the buttons
 -       txa
@@ -278,12 +283,12 @@ dc0     cpy #23
 +       dey
         bpl -
         rts
-dcbtn   lda btnlo,y
+dcbtn   lda btnlo,y             ; button Y: jump to its routine
         sta gp
         lda btnhi,y
         sta gp+1
         jmp (gp)
-dc2     cpy #DROW
+dc2     cpy #DROW               ; rows 14-20: the floppy, the files
         bcc dc9
         cpy #21
         bcs dc9
@@ -301,7 +306,7 @@ dc2     cpy #DROW
         cpy #DROW+DVIS-1
         beq dscrdn
 dc9     rts
-+       bcs dc9
++       bcs dc9                 ; (C from cpx #37: right of the arrows)
         cpx #11                 ; a file: selected, its name to the field
         bcc dc9
         tya
@@ -309,16 +314,18 @@ dc9     rts
         sbc #DROW
         clc
         adc dtop
-        cmp dcount
+        cmp dcount              ; (a row past the last file: nothing)
         bcs dc9
         jmp dselect
 
+; row 23's buttons: column from (btnx0) to before (btnx1), and the routine
 NBTN    = 6
 btnx0   .byte 1, 7, 13, 21, 26, 33
 btnx1   .byte 6, 12, 20, 25, 31, 37
 btnlo   .byte <dload, <dsave, <ddelete, <dir_reload, <disk_close, <dnew
 btnhi   .byte >dload, >dsave, >ddelete, >dir_reload, >disk_close, >dnew
 
+; a click on the scroll arrows: the list a file up / down
 dscrup  lda dtop
         beq +
         dec dtop
@@ -332,6 +339,7 @@ dscrdn  lda dtop
         inc dtop
         jmp dmrows
 +       rts
+; all file rows and the scroll column marked for redrawing
 dmrows  lda dmask               ; the file rows and the scroll column
         ora #$7e
         sta dmask
@@ -369,11 +377,11 @@ dselect pha
         jsr dmarkf              ; the new one's
         lda dtop
         sta dotop
-        lda dsel
+        lda dsel                ; above the view: it is the top one
         cmp dtop
         bcs +
         sta dtop
-+       sec
++       sec                     ; below it: the bottom one (dtop = dsel - 5)
         sbc #DVIS-1
         bcc +
         cmp dtop
@@ -386,7 +394,7 @@ dselect pha
 +       lda dmask+1
         ora #1
         sta dmask+1
-        lda dsel
+        lda dsel                ; the name (up to 16, or its 0) to the field
         jsr dptr
         ldy #0
 -       lda (dp),y
@@ -400,6 +408,7 @@ dselect pha
 dsl9    rts
 
 ; ------------------------------------------------------------------ actions
+; Load: the file named into the open slot; the page closes, the song plays
 dload   lda nlen
         bne +
         jmp dnoname
@@ -424,6 +433,8 @@ dload   lda nlen
         ldy #>msg_loaded
         jmp message
 
+; Save: the open slot's song as the file named (on the disk already: asked
+; first, dsavego after a yes); the directory read again
 dsave   lda nlen
         bne +
         jmp dnoname
@@ -455,6 +466,7 @@ dsv8    ldx #<dm_saved
         jmp dmsgok
 dsv9    rts
 
+; Delete: the file named, after a yes (ddelgo); the directory read again
 ddelete lda nlen
         bne +
         jmp dnoname
@@ -479,6 +491,8 @@ ddelgo  ldx #<dm_deleting
         jmp dmsgok
 +       rts
 
+; a yes / a no to the question on row 24 (dstate 1 overwrite, 2 delete,
+; 3 new: no only)
 dyes    lda dstate
         ldx #0
         stx dstate
@@ -503,14 +517,15 @@ dnew    lda #3
         ldy #>dpgnew
         jmp dputs
 
+; This slot / All slots / Defaults
 dnslot  jsr dnbegin
         jsr slot_blank
         ldx #<msg_newslot
         ldy #>msg_newslot
         jmp dnend
 dnall   jsr dnbegin
-        ldx curslot
-        jsr slot_put
+        ldx curslot             ; (the open one put back: each slot keeps
+        jsr slot_put            ; its style)
         ldx #0
 -       stx dni
         jsr slot_fetch
@@ -533,19 +548,21 @@ dndef   jsr dnbegin
         ldx #<msg_defs
         ldy #>msg_defs
         jmp dnend
+; the page closed, switches waiting called off
 dnbegin lda #0
         sta dstate
         sta pslot
         sta pstyle
         jmp disk_close
+; X/Y = a message: the open slot plays, the message shown
 dnend   stx dnmsg
         sty dnmsg+1
         jsr slot_play
         ldx dnmsg
         ldy dnmsg+1
         jmp message
-dni     .byte 0
-dnmsg   .word 0
+dni     .byte 0                 ; dnall's slot
+dnmsg   .word 0                 ; dnend's message
 
 ; the name field -> the open slot's name (slots.asm sname)
 dslname lda nlen
@@ -559,6 +576,7 @@ dslname lda nlen
         bne -
 +       rts
 
+; an empty name field: say so
 dnoname ldx #<dm_noname
         ldy #>dm_noname
         jmp dmsgerr
@@ -570,7 +588,7 @@ dname   ldx #<nbuf
         jmp disk_setname
 
 ; X = the file named in the field (C clear), C set: none
-dfind   ldx dcount
+dfind   ldx dcount              ; (the last one first)
 dfnext  dex
         bmi dfno
         txa
@@ -599,7 +617,7 @@ dio_begin
         sta dwasrun
         lda #0
         sta running
-        jmp ui_irqoff
+        jmp ui_irqoff           ; (ui.asm: the KERNAL's IRQ handler back)
 dio_end php
         pha
         jsr ui_irqon
@@ -659,7 +677,7 @@ dir_read
         jsr K_OPEN
         bcc +
         jmp dk_kerr
-+       lda $90
++       lda $90                 ; (ST bit 7: device not present)
         bpl +
         lda #2
         jsr K_CLOSE
@@ -672,7 +690,7 @@ dir_read
         jsr K_CLOSE
         pla
         jmp dk_kerr
-+       lda #<dir_chrin
++       lda #<dir_chrin         ; dir_parse reads with CHRIN
         sta dir_get+1
         lda #>dir_chrin
         sta dir_get+2
@@ -690,8 +708,8 @@ dir_read
         cmp #20
         bcc +
         jmp dk_drverr
-+       lda dperr
-        beq +
++       lda dperr               ; a serial error during the listing (disk_dos
+        beq +                   ; < 20 here: DE_DRIVE)
         jmp dk_drverr
 +       inc dvalid
         jmp dk_ok
@@ -708,7 +726,7 @@ dir_chrin
         sta disk_st
         and #$83                ; time-outs, no device: no byte
         bne dch8
-        lda $90
+        lda $90                 ; (ST bit 6: EOI)
         and #$40
         sta deof                ; the last byte
         pla
@@ -728,6 +746,7 @@ dir_parsebuf
         sta dir_get+2
         jsr dir_clear
         jmp dir_parse
+; a byte from dsrc, C set when dlen ran out
 dir_bget
         lda dlen
         ora dlen+1
@@ -736,7 +755,7 @@ dir_bget
         bne +
         dec dlen+1
 +       dec dlen
-dsrc = * + 1
+dsrc = * + 1                    ; (the operand: the next byte's address)
         lda $ffff
         inc dsrc
         bne +
@@ -747,6 +766,7 @@ dlen    .word 0
 
 dir_get jmp dir_chrin           ; (the source: dir_chrin or dir_bget)
 
+; an empty list, no header, no blocks free; the parse's flags clear
 dir_clear
         lda #0
         sta dcount
@@ -799,12 +819,14 @@ dpdone  stx dllen
         sta dlbuf+1,x
         sta dlbuf+2,x
         jsr dir_line
-        inc dline
+        inc dline               ; (up to 255: only line 0 is special)
         bne dpline
         dec dline
         jmp dpline
 dp9     rts
 
+; the line in dlbuf (dllen bytes; dline, dblk): the header, a file or the
+; blocks free
 dir_line
         ldx #0                  ; the first quote
 -       cpx dllen
@@ -852,7 +874,7 @@ dlfree  lda dblk
         lda dblk+1
         sta dfree+1
         rts
-dlfile  lda dcount
+dlfile  lda dcount              ; a file: its name into dnames (DMAX kept)
         cmp #DMAX
         bcs dlh8
         jsr dptr
@@ -882,7 +904,7 @@ dlf2    cpx dllen               ; the type: past spaces and "*" (not closed)
         bne dlf3
 +       inx
         bne dlf2
-dlf3    stx dtx
+dlf3    stx dtx                 ; dtyn: the type's index in dtypes (5: none)
         ldy #0
         lda #0
 dltyp   sta dtyn
@@ -917,6 +939,8 @@ dlt9    lda dtyn                ; a DEL of 0 blocks: a directory's art
         jsr dblktxt
         inc dcount
         rts
+; the file types, 3 characters each, by dtype: as the listing has them,
+; and as shown (5: ???)
 dtypes  .text "delseqprgusrrel"         ; (PETSCII $41-$5a)
         .enc "uireg"
 dtypnam .text "DELSEQPRGUSRREL???"
@@ -940,7 +964,7 @@ dptr    sta dp
         rts
 
 ; ------------------------------------------------------------------ drawing
-; X = row: cp on it (screen), dc (colour)
+; X = row: cp on it (screen), dc (colour); keeps X, Y
 drow    lda rowlo,x
         sta cp
         sta dc
@@ -958,7 +982,8 @@ dch     sta (cp),y
         iny
         rts
 
-; A = a PETSCII character -> its screen code (bold; + $80 regular)
+; A = a PETSCII character -> its screen code (bold; + $80 regular); others
+; (control codes, graphics) are "?"
 pet2scr cmp #$20
         bcc p2q
         cmp #$40
@@ -967,14 +992,14 @@ pet2scr cmp #$20
         cmp #$5b
         bcc p2r                 ; A-Z: $41-$5a as they are
         cmp #$60
-        bcc p2m                 ; [ £ ] ^ <-: $1b-$1f
-        cmp #$a0
+        bcc p2m                 ; [ pound ] ^ <-: $1b-$1f
+        cmp #$a0                ; shifted space
         beq p2sp
         cmp #$c1
         bcc p2q
         cmp #$db
         bcs p2q
-p2m     and #$1f                ; shifted letters: a-z
+p2m     and #$1f                ; shifted letters ($c1-$da): a-z
         rts
 p2at    lda #0
         rts
@@ -984,6 +1009,7 @@ p2q     lda #$3f
 p2r     rts
 
 ; X/Y = records (row, column, colour, screen codes, 0), $ff at the end
+; (dpgtext, dpgnew, dpgyesno)
 dputs   stx gp
         sty gp+1
 dps1    ldy #0
@@ -1014,7 +1040,7 @@ dps1    ldy #0
 -       lda (gp),y
         beq +
         jsr dch
-        bne -
+        bne -                   ; (Y not 0: always)
 +       iny                     ; past the 0
         tya
         clc
@@ -1037,7 +1063,7 @@ dlist_draw
         sta dmask+1
         rts
 
-; once a frame while the page is up
+; once a frame while the page is up (ui.asm): up to DPARTS parts drawn
 disk_tick
         lda #DPARTS
         sta dpn
@@ -1072,7 +1098,7 @@ dpart   lda dmask
         jsr dscroll_draw
         clc
         rts
-dpt1    ldx #0
+dpt1    ldx #0                  ; X = its lowest bit set: that one off
 -       lsr a
         bcs +
         inx
@@ -1090,26 +1116,26 @@ dpt1    ldx #0
         jsr dfree_draw
         clc
         rts
-+       dex
++       dex                     ; bits 1-6: file rows 0-5
         txa
         jsr dfrow
         clc
         rts
-dbitoff .byte $fe, $fd, $fb, $f7, $ef, $df, $bf, $7f
+dbitoff .byte $fe, $fd, $fb, $f7, $ef, $df, $bf, $7f    ; all but bit n
 
-; A = a file: its row marked, if shown
+; A = a file: its row marked, if shown ($ff, none: never)
 dmarkf  sec
         sbc dtop
         bcc +
         cmp #DVIS
         bcs +
         tax
-        inx
+        inx                     ; (row n: dmask bit n + 1)
         lda dmask
         ora dbiton,x
         sta dmask
 +       rts
-dbiton  .byte 1, 2, 4, 8, 16, 32, 64, 128
+dbiton  .byte 1, 2, 4, 8, 16, 32, 64, 128              ; bit n
 
 ; X = row: columns 11 to A - 1 blank (cp, dc on the row)
 dclr    sta dtx
@@ -1171,7 +1197,8 @@ dfrow   sta dli
         cmp dcount
         bcc +
         rts
-+       lda #$80                ; the weight, the colour
++       lda #$80                ; the weight, the colour (screen code
+                                ; + $80: regular in the UI font)
         sta dwt
         lda #C_LGR
         sta dcol
@@ -1261,7 +1288,7 @@ dscroll_draw
         inx
         cpx #DROW+DVIS
         bne -
-        lda dcount
+        lda dcount              ; (all on show: no arrows)
         cmp #DVIS+1
         bcc dsc9
         lda #C_LGR
@@ -1373,16 +1400,16 @@ dblktxt lda dblk
         asl a
         adc dcount
         tax
-        lda ddig
-        ora ddig+1
+        lda ddig                ; (a ten-thousand or a thousand: not "0"
+        ora ddig+1              ; ORed, $30)
         cmp #$30
         beq +
         lda #$39
         sta ddig+2
         sta ddig+3
         sta ddig+4
-+       ldy #2
--       lda ddig,y
++       ldy #2                  ; the hundreds, tens, units; zeros blank but
+-       lda ddig,y              ; the last
         cpy #4
         beq +
         cmp #$30
@@ -1402,7 +1429,8 @@ dblktxt lda dblk
         bne -
         rts
 
-; dnum -> ddig: 5 digits (screen codes)
+; dnum -> ddig: 5 digits (screen codes), by subtracting the powers of ten
+; (dpowlo / dpowhi); dnum is 0 after
 ddec    ldx #0
 ddl     ldy #$30
 -       lda dnum
@@ -1427,6 +1455,8 @@ dpowlo  .byte <10000, <1000, <100, <10, <1
 dpowhi  .byte >10000, >1000, >100, >10, >1
 
 ; ------------------------------------------------------------------ row 24
+; row 24: dhint the hint (grey); X/Y = a text: dmsgok light green, dmsgerr
+; light red, dmsgw white (working...)
 dhint   ldx #<dm_hint
         ldy #>dm_hint
         lda #C_GRY
@@ -1487,7 +1517,8 @@ dask    stx gp
         ldy #>dpgyesno
         jmp dputs
 
-; A = disk_err: what went wrong, in words
+; A = disk_err: what went wrong, in words (others: "Disk error NN", the
+; KERNAL's number or the drive's code)
 derror  cmp #DE_BADFILE
         bne +
         ldx #<dm_notsong
@@ -1505,8 +1536,8 @@ dnotrdy ldx #<dm_notready
         jmp dmsgerr
 +       cmp #DE_DRIVE
         bne derrn
-        lda disk_dos
-        cmp #74
+        lda disk_dos            ; 74 drive not ready, 72 disk full, 26 write
+        cmp #74                 ; protect
         beq dnotrdy
         cmp #72
         bne +
@@ -1520,7 +1551,7 @@ dnotrdy ldx #<dm_notready
         jmp dmsgerr
 +       jmp derrn2
 derrn                           ; a KERNAL error: its number
-derrn2  sta dnum                ; "Disk error NN"
+derrn2  sta dnum                ; "Disk error NN" (jmp derrn2: the drive's)
         lda #0
         sta dnum+1
         jsr ddec
@@ -1530,7 +1561,7 @@ derrn2  sta dnum                ; "Disk error NN"
         beq +
         inx
         bne -
-+       lda ddig+3
++       lda ddig+3              ; the last two digits
         sta dmbuf,x
         lda ddig+4
         sta dmbuf+1,x
@@ -1617,7 +1648,7 @@ dpgyesno
 G_CHECK = $66
 diskon  .byte 0                 ; the page is up
 dstate  .byte 0                 ; 0 browsing, 1 overwrite?, 2 delete?, 3 new?
-dwasrun .byte 0
+dwasrun .byte 0                 ; running before the disk I/O
 dvalid  .byte 0                 ; a directory was read
 dcount  .byte 0                 ; files
 dtop    .byte 0                 ; the first one shown
@@ -1626,33 +1657,33 @@ dfree   .word 0
 nlen    .byte 7                 ; the name field
 nbuf    .text "catsong"
         .fill 16 - 7, 0
-deof    .byte 0
-dperr   .byte 0
-dline   .byte 0
-dlink   .byte 0
-dblk    .word 0
-dllen   .byte 0
-dtx     .byte 0
-dtyn     .byte 0
-dli     .byte 0
-dotop   .byte 0
-dle     .byte 0
-dwt     .byte 0
-dqt     .byte 0
-dpn     .byte 0
+deof    .byte 0                 ; the parse: the last byte came (or an error)
+dperr   .byte 0                 ; ...ST's error bits
+dline   .byte 0                 ; ...the listing's line (to 255)
+dlink   .byte 0                 ; ...the line link's low byte
+dblk    .word 0                 ; ...the line's blocks
+dllen   .byte 0                 ; ...its text's length in dlbuf
+dtx     .byte 0                 ; a scratch
+dtyn     .byte 0                ; the parse: the file's type
+dli     .byte 0                 ; dfrow: the row 0-5
+dotop   .byte 0                 ; dselect: dtop before
+dle     .byte 0                 ; dfrow: the file
+dwt     .byte 0                 ; dfrow: $80 regular, 0 bold
+dqt     .byte 0                 ; dfrow: the quote's screen code
+dpn     .byte 0                 ; disk_tick: parts still to draw
 dmask   .word 0                 ; the parts to draw
-dcol    .byte 0
-dnum    .word 0
-ddig    .fill 5
+dcol    .byte 0                 ; the colour dch writes
+dnum    .word 0                 ; ddec's number
+ddig    .fill 5                 ; ...its digits
 dhdr    .fill 16                ; the disk's name (PETSCII, 0 after)
 did     .fill 5                 ; its ID and DOS type
 
 ; the buffers: past the end of the program file (diskui.asm is included
 ; last), not loaded
         .virtual
-dlbuf   .fill DLINE + 3
-dscr    .fill 16
-dmbuf   .fill 41
+dlbuf   .fill DLINE + 3         ; a listing line's text (3 zeros after)
+dscr    .fill 16                ; dfrow: the name's screen codes
+dmbuf   .fill 41                ; a row 24 message put together
 dbtxt   .fill DMAX * 3          ; the blocks, 3 screen codes
 dtype   .fill DMAX              ; 0 DEL, 1 SEQ, 2 PRG, 3 USR, 4 REL, 5 ?
 dnames  .fill DMAX * 16         ; 0 after a name shorter than 16

@@ -3,7 +3,7 @@
 ; Font V2 (art/uifont), one cat at a time:
 ;
 ;   rows 12-14 tabs: Drums | Bass | Meows, then play/pause, stop, record
-;              and the tempo ( - bpm + ); the ▼ on row 14 is the playhead
+;              and the tempo ( - bpm + ); the down arrow on row 14 is the playhead
 ;   rows 15-21 the open cat's bar as a matrix, 16 steps (step s at column
 ;              7 + 2s), 7 rows:
 ;                drums   a row per pair of sounds: roles 1-14, a left and a
@@ -37,17 +37,17 @@ UI_CHARSET  = $e000
 D018_STAGE  = $02           ; screen $c000, charset $c800
 D018_UI     = $08           ; screen $c000, charset $e000
 SPLIT_LINE  = 146           ; the last line of row 11
-BOTTOM_LINE = 252
+BOTTOM_LINE = 252           ; the first line of the lower border
 PTR_BLOCK   = $1f           ; sprite block $1f ($c7c0): the pointer
 PTR_DATA    = SCR_SPRITES + (PTR_BLOCK - $10) * 64
 
 HEADROW  = 14               ; the playhead's row
 MROW     = 15               ; the matrix's top row
 MCOL     = 7                ; step 0's column
-SETROW   = 23
-STROW    = 24
-NROWS    = 7
-COLOFS   = >(SCR_COLRAM - SCR_SCREEN)
+SETROW   = 23               ; row 23: the settings
+STROW    = 24               ; row 24: style, mode, bars, chain
+NROWS    = 7                ; the matrix's rows
+COLOFS   = >(SCR_COLRAM - SCR_SCREEN) ; colour RAM's page offset from the screen's
 
 ; UI font glyphs (bold $00-$7f, regular +$80)
 G_H     = $40
@@ -82,6 +82,7 @@ G_SL_E  = $c0
 G_SL_R  = $76
 G_DISK  = $6f               ; the disk icon (row 22)
 
+; the VIC's colour codes
 C_BLK = 0
 C_WHT = 1
 C_RED = 2
@@ -121,7 +122,7 @@ ui_init
         sta cp
         lda #>UI_CHARSET
         sta cp+1
-        ldx #8
+        ldx #8                  ; 8 pages
         ldy #0
 -       lda (gp),y
         sta (cp),y
@@ -133,7 +134,7 @@ ui_init
         bne -
         ldx #NCUSTG-1           ; our own glyphs over unused ones of the font:
 -       lda custgc,x            ; the floppy (4 x 4) and the panel's disk icon
-        sta gp
+        sta gp                  ; gp = code * 8 + $e000: its glyph
         lda #0
         sta gp+1
         .rept 3
@@ -144,14 +145,14 @@ ui_init
         lda gp+1
         adc #>UI_CHARSET
         sta gp+1
-        txa
+        txa                     ; tmp = X * 8: its 8 bytes in custg
         asl a
         asl a
         asl a
         tay
         sty tmp
         ldy #0
--       sty tmp2
+-       sty tmp2                ; (Y swapped: tmp2 the glyph's row)
         ldy tmp
         lda custg,y
         inc tmp
@@ -194,13 +195,13 @@ ui_irqon
         lda #>irq_split
         sta $0315
         lda $d011
-        and #$7f
+        and #$7f                ; the raster line's bit 8 off
         sta $d011
         lda #SPLIT_LINE
         sta $d012
         lda #1
-        sta $d01a
-        sta $d019
+        sta $d01a               ; the raster interrupt on
+        sta $d019               ; (and any pending one acked)
         lda #0
         sta mfirst              ; the mouse's next reading is no move
         cli
@@ -210,10 +211,10 @@ ui_irqon
 ui_irqoff
         sei
         lda #0
-        sta $d01a
+        sta $d01a               ; the raster interrupt off
         lda #1
-        sta $d019
-        lda #<$ea31
+        sta $d019               ; (acked)
+        lda #<$ea31             ; the KERNAL's own handler
         sta $0314
         lda #>$ea31
         sta $0315
@@ -226,16 +227,16 @@ ui_irqoff
 ; included); the write lands 22 later: cycles 58-67 (67 = line 147's 4th,
 ; before the badline's character fetches)
 irq_split
-        ldx #3
+        ldx #3                  ; (the delay: lands the $d018 write)
 -       dex
         bne -
         lda #D018_UI
         sta $d018
         lda mseen               ; the pointer: sprite 7 below the stage
         beq irql9
-        lda SCR_SCREEN + $3ff
+        lda SCR_SCREEN + $3ff   ; sprite 7's pointer (the mic's), kept
         sta s7ptr
-        lda $d02e
+        lda $d02e               ; sprite 7's colour, kept
         sta s7col
         lda #PTR_BLOCK
         sta SCR_SCREEN + $3ff
@@ -243,21 +244,21 @@ irq_split
         sta $d02e
         lda mx
         clc
-        adc #24
+        adc #24                 ; x: the screen starts at sprite x 24
         sta $d00e
         lda mx+1
         adc #0
         lsr a                   ; C = bit 8
         lda s7hi
-        and #$7f
+        and #$7f                ; (bit 7: sprite 7)
         bcc irqs1
         ora #$80
 irqs1   sta $d010
         lda my
         clc
-        adc #50
+        adc #50                 ; y: the screen starts at sprite y 50
         sta $d00f
-        lda s7mc
+        lda s7mc                ; the pointer: hi-res, not expanded
         and #$7f
         sta $d01c
         lda s7xe
@@ -276,7 +277,7 @@ irql9   lda #<irq_bottom
         sta $d012
         lda #1
         sta $d019
-        jmp $ea81
+        jmp $ea81               ; the KERNAL's exit: registers back, RTI
 
 ; line 252: the stage's charset and sprite 7 back for the next frame
 irq_bottom
@@ -312,6 +313,7 @@ irq_bottom
         sta $d019
         jmp $ea81
 
+; sprite 7 (the mic) as the stage has it: put back at line 252
 s7x     .byte 0
 s7y     .byte 0
 s7hi    .byte 0
@@ -329,7 +331,7 @@ s7lent  .byte 0             ; sprite 7 is the pointer until line 252
 ; (no keyboard scan then).
 mouse_read
         lda mfirst
-        cmp #2
+        cmp #2                  ; (2: past the first two readings)
         bcs +
         inc mfirst              ; (the first readings after start-up or disk
         lda $d419               ; I/O: only remembered)
@@ -340,10 +342,10 @@ mouse_read
 +       lda mseen               ; asleep: the POTs of a port without a mouse
         bne mrawake             ; drift slowly, so the pointer wakes on a
         lda $d419               ; click or a quick move (4+ in a frame)
-        ldy mpx
+        ldy mpx                 ; (Y = old, mpx = new)
         sta mpx
         jsr mdelta
-        jsr mabs
+        jsr mabs                ; |dx| + |dy|
         sta tmp
         lda $d41a
         ldy mpy
@@ -394,8 +396,8 @@ mbuttons
         lda #$ff                ; the buttons: port 1's fire (left) and up
         sta $dc00               ; (right) lines, no keyboard column driven
         lda $dc01
-        eor #$ff
-        and #$1f
+        eor #$ff                ; 1 = held
+        and #$1f                ; (port 1's five lines)
         sta mheld
         and #$11                ; left = bit 4, right = bit 0
         tax
@@ -415,7 +417,7 @@ mwake   and #$10
 mright  lda #1
         jsr ui_click
 +       lda mheld               ; held: no keys
-        cmp #1
+        cmp #1                  ; C set: anything held
         rts
 
 ; A = signed -> A = |A|
@@ -428,6 +430,8 @@ mabs    ora #0
 
 ; A = new POT value, Y = old: A = the signed move (the 1351's way), Z set
 ; when none
+; (the 1351's way: a POT's bit 0 is noise, so the move is new - old over
+;  7 bits, halved; -1 counts as none)
 mdelta  sty mold
         sec
         sbc mold
@@ -471,7 +475,8 @@ mclamp  lda mx+1
         sta my
 +       rts
 
-; mx, my -> X = column, Y = row
+; mx, my -> X = column, Y = row (the cell under the pointer)
+; (column = the 9-bit x / 8, row = y / 8)
 mcell   lda mx+1
         lsr a
         lda mx
@@ -487,6 +492,8 @@ mcell   lda mx+1
         rts
 
 ; the pointer moved: over the matrix the cursor follows it
+; (not on a settings page or the disk page; columns past step 15's
+;  clamp to it)
 mhover  lda tweakon
         ora diskon
         bne mh9
@@ -500,7 +507,7 @@ mhover  lda tweakon
         txa
         sec
         sbc #MCOL
-        lsr a
+        lsr a                   ; two columns a step
         cmp #16
         bcc +
         lda #15
@@ -531,20 +538,20 @@ mouse_fake
         jmp ui_click
 +       rts
 
-mx      .word 160
-my      .byte 176
-mpx     .byte 0
+mx      .word 160           ; the pointer: x 0-319
+my      .byte 176           ; y 104-199
+mpx     .byte 0             ; the POTs' last readings
 mpy     .byte 0
-mold    .byte 0
-mbut    .byte 0
-mheld   .byte 0
-mmoved  .byte 0
-mfirst  .byte 0
+mold    .byte 0             ; (mdelta's scratch)
+mbut    .byte 0             ; the buttons last frame (bit 4 left, bit 0 right)
+mheld   .byte 0             ; port 1's lines held (bits 0-4)
+mmoved  .byte 0             ; this frame moved the pointer
+mfirst  .byte 0             ; readings since the IRQs came on (2: settled)
 mseen   .byte 0             ; the mouse was used: show the pointer
-ui_fake .byte 0
+ui_fake .byte 0             ; (c64bridge writes it: mouse_fake)
 
 ; ------------------------------------------------------------------ clicks
-; A = 0 left, 1 right: at the pointer's cell
+; A = 0 left, 1 right: at the pointer's cell (from mouse_read, mouse_fake)
 ui_click
         sta side
         jsr mcell
@@ -555,10 +562,10 @@ ui_click
 +       lda diskon              ; the disk page (diskui.asm)
         beq +
         jmp dclick
-+       cpy #MROW
++       cpy #MROW               ; rows 13-14: the tab bar
         bcs +
         jmp ctop
-+       cpy #MROW+NROWS
++       cpy #MROW+NROWS         ; rows 22-24: below the matrix
         bcc +
         jmp cbottom
 +       lda tweakon
@@ -571,7 +578,7 @@ ui_click
         bcc c9                  ; scrolls
         cpx #38
         bcc +
-        cpy #MROW
+        cpy #MROW               ; column 38's top row: up
         beq cscrup
         cpy #MROW+NROWS-1
         beq cscrdn
@@ -598,7 +605,7 @@ ct9     rts
         sta gp
         lda hithi,x
         sta gp+1
-        jmp (gp)
+        jmp (gp)                ; (its handler: X = button, side)
 
 ; the tab bar's buttons: columns from - to (not included)
 NHITS   = 8
@@ -607,6 +614,7 @@ hitx1   .byte 6, 11, 18, 22, 26, 30, 35, 40
 hitlo   .byte <tab_drums, <tab_bass, <tab_sing, <b_play, <b_stop, <b_rec, <b_slower, <b_faster
 hithi   .byte >tab_drums, >tab_bass, >tab_sing, >b_play, >b_stop, >b_rec, >b_slower, >b_faster
 
+; the tabs: X = cat, side = the button
 tab_drums
         ldx #0
         beq tabclk
@@ -632,12 +640,12 @@ tcopen  txa
 mutetog lda mute,x
         eor #1
         sta mute,x
-        beq mt9
+        beq mt9                 ; (back on: nothing to cut)
         lda mvoice,x
         jsr vsilent
         cpx #2
         bne mt9
-        lda #0
+        lda #0                  ; (the echoes queued: none)
         sta echo_n
         lda sid2+1              ; SID 2: its echo and harmony voices
         beq mt9
@@ -652,15 +660,17 @@ mvoice  .byte 2, 0, 1           ; drums voice 3, bass 1, singer 2
 vsilent stx vsx
         tax
         lda #0
-        sta sptrh,x
+        sta sptrh,x             ; (script pointer high 0: no script)
         lda ctl,x
-        and #$fe
+        and #$fe                ; the gate bit off
         sta ctl,x
         ldy sidoff,x
-        sta $d404,y
+        sta $d404,y             ; the voice's control register
         ldx vsx
         rts
 vsx     .byte 0
+
+; the transport's buttons (tab bar; also keys in catsynth.asm)
 b_play  lda running             ; play / pause (on from where it was)
         eor #1
         sta running
@@ -686,6 +696,8 @@ b_rec   lda rec                 ; record: live play with REC on, or all off
 +       lda #1
         sta pmode
         jmp rectog
+; the tempo is frames a step: slower = more frames (15 at most), faster
+; = fewer (4 at least)
 b_slower
         lda tempo
         cmp #15
@@ -701,8 +713,9 @@ b_faster
         jmp retempo
 +       rts
 
+; a click below the matrix: Y = row 22-24, X = ccol = column
 cbottom cpy #SETROW
-        bne +
+        bne +                   ; row 23: the open cat's settings
         jmp csettings
 +       cpy #STROW
         beq +
@@ -713,7 +726,7 @@ cbottom cpy #SETROW
         jmp disk_open
 cb9     rts
 +       lda ccol                ; row 24: style, mode, bars, chain
-        cmp #12
+        cmp #12                 ; 0-11: the slot's key and name
         bcs cb2
         lda side                ; the slot: left the next one, right the
         beq +                   ; style list (again: closed) (slots.asm)
@@ -731,7 +744,7 @@ cbpick  jmp pick_open
         ldx #0
 +       txa
         jmp slot_select
-cb2     cmp #17
+cb2     cmp #17                 ; 12-16: the mode
         bcs +
         jmp nextmode
 +       cmp #21                 ; the bars A-D at 17-20
@@ -744,12 +757,12 @@ cb2     cmp #17
 +       cmp #23
         bne +
         jmp chainmore           ; +
-+       bcc +
++       bcc +                   ; (21: between the bars and -)
         sbc #CHAINCOL           ; a bar of the chain: the next slot (right:
         cmp song+4              ; the one before)
         bcs +
         tax
-        lda song+5,x
+        lda song+5,x            ; its slot 0-3 (song+5.. the chain)
         ldy side
         bne cbprev
         adc #1                  ; (C clear)
@@ -765,7 +778,7 @@ cbset   sta song+5,x
 ; the chain one bar shorter (1 at least) / longer (16 at most; the new
 ; bar plays the last one's slot again)
 chainless
-        ldx song+4
+        ldx song+4              ; song+4: the chain's length 1-16
         cpx #2
         bcc +
         dex
@@ -786,10 +799,11 @@ chainmore
 chained jsr findchain           ; (a preset again? C goes on from it)
         jsr songline
         lda #$80
-        sta dirty
+        sta dirty               ; the row 24 redraw
 +       rts
 
 csettings
+; a click on row 23 (ccol, side)
         lda msgt                ; row 23 reacts only to what it shows: not
         bne cs9                 ; under a message or live play's keys
         lda tweakon             ; the tweaks page: "T back" (33-38) closes it
@@ -805,7 +819,7 @@ csettings
         cmp #32
         bcs cs9
         jmp heartog
-cs1     lda pmode
+cs1     lda pmode               ; (live play's keys on the row: nothing)
         bne cs9
         ldx lane
         beq setdrums
@@ -822,7 +836,7 @@ setdrums
         cmp #14
         bcs sd9
         sec
-        sbc #7
+        sbc #7                  ; (6 and 7: 0)
         bcs +
         lda #0
 +       jmp setswing
@@ -832,7 +846,7 @@ sd9     rts
 setbass lda ccol
         cmp #4
         bne +
-        lda #$ff
+        lda #$ff                ; (-1)
         jmp btranspose
 +       cmp #9
         bne +
@@ -844,7 +858,7 @@ setbass lda ccol
         bcs +
         lda lastv+1             ; 1-4, round
         clc
-        adc #$20
+        adc #$20                ; the length's bits 5-6 + 1
         and #$60
         sta tmp
         lda lastv+1
@@ -862,13 +876,13 @@ setsing lda ccol
         cmp #12
         bcs ss2
         sec
-        sbc #6
+        sbc #6                  ; (5 and 6: 0) the place in ECHOS
         bcs +
         lda #0
 +       tax
         lda echos,x
-        sta esteps
-        jsr store3
+        sta esteps              ; the echo delay in steps
+        jsr store3              ; (stored in the song)
         jsr seq_retempo
         jmp sdirty
 ss2     cmp #17
@@ -887,7 +901,7 @@ ss2     cmp #17
 +       sec
         sbc #33
         bcc ss9
-        lsr a
+        lsr a                   ; two columns a kind
         cmp #4
         bcs ss9
         ldx side                ; right: the tweaks page, on its row
@@ -898,7 +912,7 @@ ss2     cmp #17
         sta tmp
         asl a
         adc tmp
-        sta tsel
+        sta tsel                ; (the kind's first item: kind * 3)
         rts
 +       asl a                   ; the kind into bits 5-6 of the last meow
         asl a
@@ -947,7 +961,7 @@ actdrum lda crow                ; role = row * 2 + side + 1
         asl a
         sec
         adc side
-        cmp (ep),y
+        cmp (ep),y              ; (ep: the edited bar, 16 steps a cat)
         bne +
         lda #0                  ; the same sound again: off
 +       sta (ep),y
@@ -956,6 +970,7 @@ actdrum lda crow                ; role = row * 2 + side + 1
         jsr audition
 +       jmp moved
 
+; a bass step: bits 0-4 the note 1-31, 5-6 the length - 1, bit 7 sliding in
 actbass lda (ep),y
         beq abnew
         jsr browof              ; a note on this row?
@@ -997,9 +1012,10 @@ abnew   lda crow                ; a new note: the row's, the last length,
         jsr audition
         jmp moved
 
+; a singer step: bits 0-4 the degree + 1, 5-6 the kind (mew, meow, ooh, mrr)
 actsing lda (ep),y
         beq asnew
-        jsr srowof
+        jsr srowof              ; a meow on this row?
         cmp crow
         bne asnew
         lda side
@@ -1036,15 +1052,15 @@ asnew   lda crow                ; a meow on the row's degree, the last kind
 scroll  ldx lane
         beq scr9
         clc
-        adc view-1,x
-        bmi scr9
+        adc view-1,x            ; view-1,x: view (bass), view+1 (singer)
+        bmi scr9                ; (below 0: no)
         cpx #1
         bne +
-        cmp bmaxv
+        cmp bmaxv               ; the bass: up to bmaxv
         beq scrok
         bcs scr9
         bcc scrok
-+       cmp #16-NROWS+1
++       cmp #16-NROWS+1         ; the singer: degrees 0-15, up to 9
         bcs scr9
 scrok   sta view-1,x
         jmp sdirty
@@ -1081,7 +1097,7 @@ ui_rescale
         sta bscale,x
         inx
         stx bcount
-+       ldy bcount
++       ldy bcount              ; brow[n] = bcount - 1 (0 at least)
         dey
         tya
         bpl +
@@ -1092,7 +1108,7 @@ ui_rescale
         beq +
         ldy bcount
         lda bscale-1,y
-        cmp tmp2
+        cmp tmp2                ; (n itself the last one in: on the scale)
         beq +
         lda brow,x              ; off the scale
         ora #$80
@@ -1118,9 +1134,9 @@ ui_rescale
 browof  and #$1f
         tax
         lda brow,x
-        and #$7f
+        and #$7f                ; its place in the scale
         sec
-        sbc view
+        sbc view                ; (view: the window's bottom)
         bcc +
         cmp #NROWS
         bcs +
@@ -1143,7 +1159,7 @@ brownote
         tax
         lda bscale,x
         rts
-+       lda #13
++       lda #13                 ; (past the scale: the root)
         rts
 
 ; A = singer step byte -> its row 0-6 ($ff: not in the window), keeps Y
@@ -1165,7 +1181,7 @@ srowof  and #$1f
 ; A = row -> A = the row's singer step bits: degree + 1, keeps Y
 srowdeg eor #$ff
         sec
-        adc #NROWS-1
+        adc #NROWS-1            ; (6 - row)
         clc
         adc view+1
         clc
@@ -1173,11 +1189,12 @@ srowdeg eor #$ff
         rts
 
 ; the window over the open cat's notes: the lowest at the bottom
+; (the drums: none; nothing in the bar: bass the root, singer the bottom)
 autoview
         ldx lane
         beq av9
         lda #$ff
-        sta tmp2
+        sta tmp2                ; the lowest so far ($ff: none)
         ldy #15
 avloop  tya
         pha
@@ -1223,7 +1240,7 @@ avsing  cmp #16-NROWS+1
         bcc +
         lda #16-NROWS
 +       sta view+1
-avcur   lda #NROWS-1
+avcur   lda #NROWS-1            ; the cursor on the bottom row
         sta crow
 av9     rts
 
@@ -1242,20 +1259,20 @@ cell1   lda lane
 lane    = cury                  ; the open cat (what was the cursor's row)
 crow    .byte 6                 ; the cursor's matrix row 0-6
 view    .byte 0, 0              ; the bottom row's index: bass, singer
-bmaxv   .byte 0
-bcount  .byte 0
-side    .byte 0
-ccol    .byte 0
-ctmp    .byte 0
-mrw     .byte 0
-bscale  .fill 32
-brow    .fill 32
+bmaxv   .byte 0                 ; the bass window's highest bottom
+bcount  .byte 0                 ; notes in the scale (bscale)
+side    .byte 0                 ; 0 left, 1 right: the click's button
+ccol    .byte 0                 ; the click's column
+ctmp    .byte 0                 ; (cell1's scratch)
+mrw     .byte 0                 ; the matrix row being drawn
+bscale  .fill 32                ; the scale's bass notes, low to high
+brow    .fill 32                ; by note 1-31: its index in bscale
 
 ; ------------------------------------------------------------------ drawing
 ; rows 12-24 from scratch
 ui_draw jsr ui_rescale
         ldx #0                  ; clear rows 12-24 (520 cells)
--       lda #$20
+-       lda #$20                ; (4 runs of 130: rows 12-24)
         .for r = 0, r < 520, r += 130
         sta SCR_SCREEN + 12*40 + r,x
         .next
@@ -1280,7 +1297,7 @@ ui_draw jsr ui_rescale
         sta SCR_SCREEN + 22*40
         lda #G_SBR
         sta SCR_SCREEN + 22*40 + 39
-        ldx #NSEPS-1            ; ┬ │ at the tab bar's separators
+        ldx #NSEPS-1            ; the T and | pieces at the tab bar's separators
 -       ldy tabsep,x
         lda #G_TT
         sta SCR_SCREEN + 12*40,y
@@ -1311,9 +1328,9 @@ ui_draw jsr ui_rescale
         lda #$20
         sta SCR_SCREEN + 22*40 + 36
         sta SCR_SCREEN + 22*40 + 38
-        lda #$80
+        lda #$80                ; all to redraw
         sta dirty
-        lda #$ff
+        lda #$ff                ; none drawn: playhead, cursor, bar anew
         sta lstep2
         sta cursat
         sta lbar
@@ -1321,7 +1338,7 @@ ui_draw jsr ui_rescale
         jmp status
 
 NSEPS   = 6
-tabsep  .byte 6, 11, 18, 22, 26, 30
+tabsep  .byte 6, 11, 18, 22, 26, 30 ; the tab bar's walls (columns)
 
 ; the tab bar (rows 13-14): the cats' names, the transport, the tempo
 tabbar  ldx #2
@@ -1330,7 +1347,7 @@ tb1     ldy tabcol,x            ; the names: the open one bold, in its colour;
         sta tmp2
         lda #C_GRY
         cpx lane
-        bne +
+        bne +                   ; (not open: grey)
         lda lanecol,x
 +       ldy mute,x
         beq +
@@ -1340,7 +1357,7 @@ tb1     ldy tabcol,x            ; the names: the open one bold, in its colour;
 tb2     lda tabtext,y           ; (the text is laid out at its columns)
         cpx lane
         beq +
-        ora #$80
+        ora #$80                ; (not open: regular)
 +       sta SCR_SCREEN + 13*40,y
         lda tbc
         sta SCR_COLRAM + 13*40,y
@@ -1349,7 +1366,7 @@ tb2     lda tabtext,y           ; (the text is laid out at its columns)
         bne tb2
         dex
         bpl tb1
-        ldx #39                 ; row 14: ├──┴──┤, open under the tab
+        ldx #39                 ; row 14: the frame line, open under the tab
 -       lda #G_H
         sta SCR_SCREEN + 14*40,x
         lda #C_LGR
@@ -1366,12 +1383,12 @@ tb2     lda tabtext,y           ; (the text is laid out at its columns)
         sta SCR_SCREEN + 14*40,y
         dex
         bpl -
-        ldx lane                ; the gap under the open tab, ┘ └ at its ends
+        ldx lane                ; the gap under the open tab, corners at its ends
         ldy tabcol,x
         dey
         lda #G_SBR
         cpx #0
-        bne +
+        bne +                   ; (the drums' tab starts at the wall)
         lda #G_V
 +       sta SCR_SCREEN + 14*40,y
         iny
@@ -1386,7 +1403,7 @@ tb2     lda tabtext,y           ; (the text is laid out at its columns)
         sta SCR_SCREEN + 14*40,y
         ldx #39
 -       lda SCR_SCREEN + 14*40,x
-        sta r14buf,x
+        sta r14buf,x            ; (kept: the playhead draws over it)
         dex
         bpl -
         lda #$ff
@@ -1402,7 +1419,7 @@ transport
         bne ++
 +       lda #G_PLAY
         ldx #C_WHT
-+       sta SCR_SCREEN + 13*40 + 20
++       sta SCR_SCREEN + 13*40 + 20 ; column 20
         stx SCR_COLRAM + 13*40 + 20
         lda #G_STOP
         sta SCR_SCREEN + 13*40 + 24
@@ -1414,7 +1431,7 @@ transport
         lda rec
         beq +
         ldx #C_RED
-        lda frame
+        lda frame               ; recording: red / white, 16 frames each
         and #16
         beq +
         ldx #C_WHT
@@ -1427,7 +1444,7 @@ transport
         sta SCR_COLRAM + 13*40 + 32
         sta SCR_COLRAM + 13*40 + 38
         ldx tempo
-        lda bpm100-4,x
+        lda bpm100-4,x          ; (the tables start at tempo 4)
         sta SCR_SCREEN + 13*40 + 34
         lda bpm10-4,x
         sta SCR_SCREEN + 13*40 + 35
@@ -1438,16 +1455,18 @@ transport
         sta SCR_COLRAM + 13*40 + 35
         sta SCR_COLRAM + 13*40 + 36
         lda running
-        sta ltrans
+        sta ltrans              ; what is drawn: ui_tick redraws on a change
         lda rec
         sta ltrans+1
         lda tempo
         sta ltrans+2
         rts
-ltrans  .byte 0, 0, 0
-tbc     .byte 0
+ltrans  .byte 0, 0, 0           ; running, rec, tempo as drawn
+tbc     .byte 0                 ; (the name's colour)
 
 ; a step lasts tempo frames (50 Hz, 4 steps a beat): 750 / tempo bpm
+; (the bpm rounded, as screen code digits by tempo 4-15: hundreds (a blank
+;  under 100), tens, ones)
 bpm100  .for t = 4, t < 16, t += 1
         .byte ((1500 / t + 1) / 2 < 100) ? $20 : $30 + (1500 / t + 1) / 2 / 100
         .next
@@ -1459,13 +1478,15 @@ bpm1    .for t = 4, t < 16, t += 1
         .next
 
         .enc "screen"
-tabtext .text " Drums Bass Meows "
+tabtext .text " Drums Bass Meows " ; (by column: see tabcol)
         .enc "none"
-tabcol  .byte 1, 7, 12
+tabcol  .byte 1, 7, 12          ; by cat: the name's first column
 tablen  .byte 5, 4, 6               ; (Meows + a blank: the gap meets the wall at 18)
-lanecol .byte C_WHT, C_ORA, C_LBL
+lanecol .byte C_WHT, C_ORA, C_LBL ; the open tab's colour by cat
 
 ; ------------------------------------------------------------------ the matrix
+; the whole matrix (rows 15-21): the dots, each row's labels (columns 1-5),
+; the arrows, the echoes and the notes
 ui_matrix
         lda tweakon             ; (the meow tweaks page instead)
         beq +
@@ -1483,12 +1504,12 @@ mrow1   lda mrw                 ; a row's labels
         lda mrw                 ; singer: the note of the degree
         jsr srowdeg
         clc
-        adc #3
+        adc #3                  ; (degtab's index: degree + 4, then the key)
         clc
         adc transp
         bpl +
         lda #2
-+       cmp #2
++       cmp #2                  ; (clamped to degtab's 2-29)
         bcs +
         lda #2
 +       cmp #30
@@ -1500,7 +1521,7 @@ mrow1   lda mrw                 ; a row's labels
         jmp mlname
 mlbass  lda mrw                 ; bass: the note the row plays
         jsr brownote
-        cmp #13
+        cmp #13                 ; (note 13: the root)
         php
         jsr bassnote
         ldx #C_LGR
@@ -1518,13 +1539,13 @@ mlname  stx mlc
         jsr rowptr
         ldy #3
         lda mlc
--       sta (cp),y
+-       sta (cp),y              ; columns 1-3 in the label's colour
         dey
         bne -
         jmp mlnext
 mldrum  lda mrw                 ; drums: the two sounds' names, coloured
         asl a
-        asl a
+        asl a                   ; 4 characters a row: 2 and 2 (kitabbr)
         tax
         lda kitabbr,x
         ldy #1
@@ -1540,7 +1561,7 @@ mldrum  lda mrw                 ; drums: the two sounds' names, coloured
         sta (gp),y
         lda mrw
         asl a
-        tax
+        tax                     ; 2 colours a row (drcol)
         lda drcol,x
         ldy #1
         sta (cp),y
@@ -1663,7 +1684,7 @@ mnotes  lda lane
         asl a
         asl a
         asl a
-        sta mbase
+        sta mbase               ; the open cat's 16 steps in the bar
         lda #0
         sta mstp
 mst1    lda mstp
@@ -1677,7 +1698,7 @@ mst1    lda mstp
         bne ms2
         sec                     ; drums: row (role - 1) / 2, a block on the
         sbc #1                  ; left, a ball on the right
-        cmp #14
+        cmp #14                 ; (roles 1-14 only)
         bcc +
         jmp ms8
 +
@@ -1687,7 +1708,7 @@ mst1    lda mstp
         lda drcol,x
         sta mcol
         txa
-        lsr a
+        lsr a                   ; C = role's bit 0: the right sound
         lda #G_FULL
         bcc msput
         lda #G_BALL
@@ -1709,7 +1730,7 @@ ms2     dex
 +       sta mcol
         lda #G_FULL
         ldx mval
-        bpl msput
+        bpl msput               ; (bit 7: sliding in)
         lda #C_YEL
         sta mcol
         lda #G_ARROW
@@ -1740,11 +1761,11 @@ msput   pha
         lsr a
         lsr a
         lsr a
-        and #6
+        and #6                  ; bits 5-6 -> 0, 2, 4, 6
         beq ms8
         sta mcnt
 -       iny
-        cpy #38
+        cpy #38                 ; (not past column 37)
         bcs ms8
         lda #G_SUST
         sta (gp),y
@@ -1759,11 +1780,11 @@ ms8     inc mstp
         jmp mst1
 +       rts
 
-mbase   .byte 0
-mstp    .byte 0
-mval    .byte 0
-mcnt    .byte 0
-mcol    .byte 0
+mbase   .byte 0                 ; the open cat's first cell (lane * 16)
+mstp    .byte 0                 ; the step being drawn 0-15 (mechoes: cell)
+mval    .byte 0                 ; its step byte
+mcnt    .byte 0                 ; (a counter: the hold's cells, the echo's step)
+mcol    .byte 0                 ; its colour
 
 ; A = matrix row 0-6: gp / cp on it (keeps X, Y)
 rowptr  clc
@@ -1789,7 +1810,7 @@ kindglyph
         lsr a
         lsr a
         lsr a
-        and #3
+        and #3                  ; (bits 5-6: the kind)
         tax
         lda kindg,x
         rts
@@ -1803,12 +1824,9 @@ drname  .text "Kick    Boom    Snare   Bap     Clap    Rim     "
         .enc "none"
         .cerror * - drname != 14 * 8, "drname: 14 names of 8"
 
+; the dots' colours by step (the beats brighter); the drum sounds' colours
+; by role - 1 (a row's left one, then its right one)
 dotcol  .byte [C_LGR, C_GRY, C_GRY, C_GRY] x 4
-mtchr   .byte [$20] x 6, [G_DOT, $20] x 16
-mtcol   .byte [C_GRY] x 6
-        .for i = 0, i < 16, i += 1
-        .byte (i % 4) ? C_GRY : C_LGR, C_GRY
-        .next
 drcol   .byte C_LRD, C_RED, C_YEL, C_ORA, C_LGN, C_GRN, C_CYN, C_LBL
         .byte C_LGR, C_WHT, C_GRY, C_BRN, C_PUR, C_BLU
 
@@ -1836,6 +1854,8 @@ tsel    .byte 0                 ; the selected item (of the page's)
 ; how (0 the byte, 1 high nibble, 2 low nibble, 3 bit 0, 4 bit 1, 5 bit 2), max,
 ; default,
 ; the label (low byte of its text; all in tlabels' page)
+; (the item's bytes: 0 row, 1 lcol, 2 vcol, 3 format, 4-5 the byte's
+;  address, 6 how, 7 max, 8 default, 9 the label)
 TF_NUM   = 0
 TF_DELAY = 1
 TF_WAVE  = 2
@@ -1846,6 +1866,8 @@ titem   .macro row, lcol, vcol, fmt, var, how, max, def, lab
         .byte \row, \lcol, \vcol, \fmt, <\var, >\var, \how, \max, \def, <\lab
         .endm
 TI_LEN  = 10
+; all the pages' items: the meows' 13 (a row of 3 per kind, then Cat Size),
+; the drums' 2, the bass's 6
 titems
 ti_meow .for k = 0, k < 4, k += 1
         #titem 15+k, 8, 13, TF_NUM, twbend+k, 0, 16, 8, tl_bend
@@ -1855,14 +1877,16 @@ ti_meow .for k = 0, k < 4, k += 1
         #titem 20, 3, 12, TF_SIZE, tflags, 1, 3, 0, tl_csize
 ti_drum #titem 16, 2, 13, TF_NUM, twside, 2, 8, 0, tl_side
         #titem 18, 2, 13, TF_NUM, twtune, 0, 16, 8, tl_tune
+        #titem 16, 25, 23, TF_BOX, bpulse, 3, 1, 1, tl_pulse
 ti_bass #titem 15, 2, 13, TF_LVL, twside, 1, 8, 0, tl_level
         #titem 17, 2, 13, TF_DELAY, btweak, 1, 7, 0, tl_delay
         #titem 17, 25, 23, TF_BOX, tflags, 5, 1, 0, tl_dubf
         #titem 19, 2, 13, TF_WAVE, btweak, 2, 3, 0, tl_wave
         #titem 19, 25, 23, TF_BOX, tflags, 3, 1, 0, tl_meowz
         #titem 21, 25, 23, TF_BOX, tflags, 4, 1, 0, tl_resb
+; by cat (drums, bass, meows): its page's first item, how many
 tifirst .byte (ti_drum - titems) / TI_LEN, (ti_bass - titems) / TI_LEN, 0
-ticount .byte 2, 6, 13
+ticount .byte 3, 6, 13
 
         .align 256              ; (the labels share a page: tputs)
         .enc "uireg"
@@ -1871,6 +1895,7 @@ tl_bend  .null "Bend"
 tl_vowel .null "Vowel"
 tl_tone  .null "Tone"
 tl_side  .null "Sidechain"
+tl_pulse .null "Beat pulse"
 tl_tune  .null "Tune"
 tl_delay .null "Delay"
 tl_wave  .null "Wave"
@@ -1890,8 +1915,9 @@ tsizes  .text "Fat Cat Tomcat KittenNewborn"   ; 7
 tkname  .text "Mew MeowOoh Mrr?"
         .enc "none"
 tvwidth .byte 2, 3, 5, 1, 2, 7               ; the value's width by format
-tdelstp .byte 0, 1, 2, 3, 4, 6, 8, 12        ; (the delay's steps: seq.asm dsteps)
 
+; the open cat's settings page up (tsel its first item) / down; tdirty
+; redraws all
 tweak_open
         lda #1
         sta tweakon
@@ -1924,7 +1950,6 @@ tiptr   txa
         rts
 tix     .byte 0
 tip     = $de                   ; 2 bytes of zero page: the item (free after the title)
-tvar    .word 0
 
 ; the selected item's absolute index -> X
 tselx   ldx lane
@@ -1988,7 +2013,7 @@ tstore  sta tnew
         iny
         lda (tip),y
         tay
-tsa     lda $ffff
+tsa     lda $ffff               ; (the byte as it is: self-modified)
         cpy #0
         bne +
         lda tnew                ; the byte
@@ -2028,11 +2053,11 @@ tsa     lda $ffff
         asl a
         asl a
         ora tmp
-tsb     sta $ffff
+tsb     sta $ffff               ; (self-modified)
         lda tflags              ; (Meowize: the filter routing now)
-        cmp twlastf
+        cmp twlastf             ; (a change of tflags: Meowize may have
         beq +
-        sta twlastf
+        sta twlastf             ; turned: SID 1's filter routing again)
         lda route1
         jsr wroute1
 +       rts
@@ -2055,7 +2080,7 @@ tstep   sta tdir
 +       jsr tval
         ldy tdir
         beq tsreset
-        bmi tsdown
+        bmi tsdown              ; (-1)
         ldy #7                  ; (max: the item's byte 7)
         pha
         jsr tiptr
@@ -2065,14 +2090,14 @@ tstep   sta tdir
         cmp tmax
         bcs tsdone
         adc #1
-        bne tsput
+        bne tsput               ; (always)
 tsdown  cmp #0
         beq tsdone
         sec
         sbc #1
         jmp tsput
 tsreset jsr tiptr
-        ldy #8
+        ldy #8                  ; (the default: the item's byte 8)
         lda (tip),y
 tsput   jsr tstore
 tsdone  jsr tauto
@@ -2087,9 +2112,9 @@ tauto   lda hear
 heartog lda hear                ; P / a click: Preview on / off
         eor #1
         sta hear
-        jmp setlane
-tdir    .byte 0
-tmax    .byte 0
+        jmp setlane             ; (row 23 again)
+tdir    .byte 0                 ; -1 / +1 / 0 (tstep)
+tmax    .byte 0                 ; (the item's max)
 
 ; play the open cat: a kick, a bass note, or the selected meow's kind
 tplay   lda lane
@@ -2105,11 +2130,11 @@ tplay   lda lane
 tpb     jsr trig_bass
         lda running
         bne tp9
-        lda #12
+        lda #12                 ; (audt: let go in 12 frames when stopped)
         sta audt
 tp9     rts
 +       lda tsel                ; meows: the selected row's kind
-        sta tmp
+        sta tmp                 ; (tkind counts the threes)
         lda #0
 -       ldy tmp                 ; (tsel / 3)
         cpy #3
@@ -2123,7 +2148,7 @@ tp9     rts
 +       lda tkind
         ldx #0
         stx tkind
-        cmp #4                  ; (Level: a meow)
+        cmp #4                  ; (Cat Size: a meow)
         bcc +
         lda #1
 +
@@ -2138,7 +2163,7 @@ tplayk  asl a
         lda lastv+2
         and #$1f
         bne +
-        lda #6
+        lda #6                  ; (no meow yet: degree 5)
 +       ora tmp
         sta lastv+2
         ldx #0                  ; (no echoes)
@@ -2164,7 +2189,7 @@ ui_tweak
         lda lane                ; meows: the marks and names
         cmp #2
         bne utw2
-        lda #3
+        lda #3                  ; the 4 kinds, rows 18 up to 15
         sta mrw
 -       lda mrw
         jsr rowptr
@@ -2176,7 +2201,7 @@ ui_tweak
         sta (cp),y
         txa
         asl a
-        asl a
+        asl a                   ; 4 characters each (tkname)
         tax
         ldy #3
 -       lda tkname,x
@@ -2191,7 +2216,7 @@ ui_tweak
         bpl --
 utw2    lda lane                ; drums: a hint
         bne +
-        lda #6
+        lda #6                  ; row 21
         jsr rowptr
         ldx #<tl_kick
         ldy #13
@@ -2300,13 +2325,13 @@ tdv     ldy tvc                 ; < value >
         lda tv                  ; a level: 0, -1 .. -8
         beq tdzero
         pha
-        lda #$2d
+        lda #$2d                ; "-"
         sta (gp),y
         lda #C_WHT
         sta (cp),y
         iny
         pla
-        ora #$30
+        ora #$30                ; the digit
         sta (gp),y
         lda #C_WHT
         sta (cp),y
@@ -2421,6 +2446,7 @@ tdput   sta (gp),y
         inx
         iny
         rts
+; where a value's name starts in tdelay / twaves / tsizes, by value
 tdelofs .byte 0, 3, 6, 9, 12, 15, 18, 21
 twofs   .byte 0, 5, 10, 15
 tszofs  .byte 0, 7, 14, 21
@@ -2465,7 +2491,7 @@ tclick  lda spick               ; the style list (slots.asm)
         tya
         sec
         sbc #MROW
-        cmp #4                  ; (rows 15-18; Level's below)
+        cmp #4                  ; (rows 15-18; Cat Size's below)
         bcs tc1
         jmp tplayk
 tc1     ldx lane                ; the item on this row whose part is here
@@ -2493,7 +2519,7 @@ tc2     jsr tiptr
         beq tcbox
         bcs tcnext
         clc
-        adc #7
+        adc #9                  ; (the label: 10 columns, "Dub filter")
         cmp ccol
         bcc tcnext
 tcbox   jsr tsetsel
@@ -2559,6 +2585,8 @@ tsetsel stx tselsv
         rts
 
 ; the keys on the page
+; (from the main loop's keys while tweakon; #pressed: Z clear when pressed
+;  this frame; shifted: Z clear when a SHIFT is held)
 keys_tweak
         #pressed K_T
         beq +
@@ -2577,7 +2605,7 @@ keys_tweak
         beq kt2
         ldx lane
         jsr shifted
-        bne +
+        bne +                   ; (SHIFT: up)
         ldy tsel
         iny
         tya
@@ -2641,7 +2669,7 @@ ui_tick lda running             ; the transport when it changed (rec blinks)
         beq +
         ldx bar
         ldy song+5,x
-        cpy eslot
+        cpy eslot               ; (eslot: the bar being edited)
         bne +
         lda step
 +       cmp lstep2
@@ -2655,7 +2683,7 @@ ui_tick lda running             ; the transport when it changed (rec blinks)
         txa
         asl a
         tay
-        lda r14buf+MCOL,y
+        lda r14buf+MCOL,y       ; row 14's line back under it
         sta SCR_SCREEN + HEADROW*40 + MCOL,y
         lda #C_LGR
         sta SCR_COLRAM + HEADROW*40 + MCOL,y
@@ -2699,7 +2727,7 @@ cursor  lda crow
         asl a
         asl a
         asl a
-        ora curx
+        ora curx                ; row * 16 + step
         cmp cursat
         beq +
         pha
@@ -2713,7 +2741,7 @@ cursor  lda crow
         sta curc
 +       jsr curptr
         lda frame
-        and #8
+        and #8                  ; blinking: 8 frames as it is, 8 lit
         beq +
         lda curg
         sta (gp),y
@@ -2760,12 +2788,14 @@ curptr  lda crow
         rts
 
 cursat  .byte $ff           ; row * 16 + step of the cell saved ($ff: none)
-curg    .byte 0
+curg    .byte 0             ; the cell's glyph and colour, saved
 curc    .byte 0
-lstep2  .byte $ff
-r14buf  .fill 40
+lstep2  .byte $ff           ; the playhead's step drawn ($ff: none)
+r14buf  .fill 40            ; row 14 as drawn (without the playhead)
 
 ; ------------------------------------------------------------------ row 23
+; the open cat's settings on row 23 (or live play's keys, or a page's
+; title); a message up keeps the row
 ui_settings
         lda msgt                ; a message up: leave it
         beq +
@@ -2787,6 +2817,7 @@ ui_settings
         ldy #>t_live
         jmp puts23
 
+; a settings page's title (and Preview's box), else the cat's settings
 setlane lda tweakon
         beq +
         lda spick               ; the style list's title
@@ -2817,13 +2848,14 @@ hear    .byte 0                 ; (off: changes aren't auditioned)
         jmp ssing
 +       jmp sbass
 
+; drums: Swing, its slider, what LMB / RMB put on the cursor's row
 sdrums  ldx #<t_drums
         ldy #>t_drums
         lda #C_GRY
         jsr puts23
         lda swing
         ldx #6
-        ldy #6
+        ldy #6                  ; (6 cells at column 6)
         jsr slider
         lda crow                ; what the buttons put on the row: "LMB
         asl a                   ; Kick  RMB Boom", the names in their colours
@@ -2851,6 +2883,7 @@ sdrums  ldx #<t_drums
         bne -
         rts
 
+; bass: Key -/+, the length new notes get, RMB: a slide
 sbass   ldx #<t_bass
         ldy #>t_bass
         lda #C_GRY
@@ -2858,7 +2891,7 @@ sbass   ldx #<t_bass
         jsr minusplus
         lda btransp
         ldx #6
-        jsr signed2
+        jsr signed2             ; (columns 6-7)
         lda lastv+1             ; the length new notes get
         lsr a
         lsr a
@@ -2867,7 +2900,7 @@ sbass   ldx #<t_bass
         lsr a
         and #3
         clc
-        adc #$31
+        adc #$31                ; the digit 1-4
         sta SCR_SCREEN + SETROW*40 + 16
         lda #C_WHT
         sta SCR_COLRAM + SETROW*40 + 16
@@ -2895,6 +2928,7 @@ minusplus
         sta SCR_COLRAM + SETROW*40 + 9,x
         rts
 
+; singer: the echo's slider, Key -/+, the harmony, the four kinds
 ssing   ldx #<t_sing
         ldy #>t_sing
         lda #C_GRY
@@ -2908,11 +2942,11 @@ ssing   ldx #<t_sing
         bne -
 +       txa
         ldx #5
-        ldy #5
+        ldy #5                  ; (5 cells at column 5)
         jsr slider
         lda transp
         ldx #19
-        jsr signed2
+        jsr signed2             ; (columns 19-20)
         ldx #<t_hnone           ; the harmony: off / 3rd / 5th, "--" in mono
         ldy #>t_hnone
         lda sid2+1
@@ -2934,7 +2968,7 @@ ssing   ldx #<t_sing
         asl a
         asl a
         eor lastv+2
-        and #$60
+        and #$60                ; (bits 5-6 alike: the kind new meows get)
         bne +
         lda #C_WHT
         bne ++
@@ -2943,14 +2977,15 @@ ssing   ldx #<t_sing
         dex
         bpl -
         rts
-kindx   .byte 33, 35, 37, 39
+kindx   .byte 33, 35, 37, 39    ; the kinds' columns on row 23
+; harmony's name by its value (0 off, 2 a 3rd, 4 a 5th)
 hname   .byte <t_hoff, <t_hoff, <t_h3, <t_h3, <t_h5
 
 ; A = value, X = track cells, Y = column: a slider (the knob at value)
 slider  sta tmp
         stx tmp2
         sty slcol
-        lda #G_SL_L0
+        lda #G_SL_L0            ; (a filled left cap above 0)
         ldx tmp
         beq +
         lda #G_SL_L1
@@ -2967,7 +3002,7 @@ slider  sta tmp
         lda #G_SL_R
         jsr slput
         lda tmp
-        cmp tmp2
+        cmp tmp2                ; (the knob only inside the track)
         bcs +
         sec
         adc slcol               ; value + column + 1
@@ -3014,8 +3049,8 @@ puts23  stx gp
         ldy #0
 p23a    lda (gp),y
         cmp #$ff
-        beq p23z
-        tax
+        beq p23z                ; ($ff: the end)
+        tax                     ; X = the piece's column
 p23b    iny
         lda (gp),y
         beq +
@@ -3024,10 +3059,12 @@ p23b    iny
         sta SCR_COLRAM + SETROW*40,x
         inx
         bne p23b
-+       iny
++       iny                     ; (past the 0: the next piece)
         bne p23a
 p23z    rts
 
+; row 23's texts for puts23 (the UI font's regular weight; the ones after
+; .enc "screen" are bold)
         .enc "uireg"
 t_drums .byte 0
         .null "Swing"
@@ -3087,7 +3124,7 @@ t_twp   .byte 0
         .null "T back"
         .byte $ff
         .cerror (>t_tweak) != (>(*-1)), "the tweak titles share a page"
-ttitle  .byte <t_twd, <t_twb, <t_twm
+ttitle  .byte <t_twd, <t_twb, <t_twm ; the pages' titles by cat (low bytes)
 t_live  .byte 1
         .null "Live: pads  RETURN rec  DEL undo  <- back"
         .byte $ff
@@ -3133,7 +3170,7 @@ status  ldx #39
 -       cpy sname
         bcs +
         lda sname+1,y
-        jsr pet2scr
+        jsr pet2scr             ; (sname: a length, then PETSCII)
         jmp ++
 +       lda #$20
 +       sta SCR_SCREEN + STROW*40 + 3,y
@@ -3147,14 +3184,14 @@ stsname lda cstyle              ; else the style's name: 9 characters
         asl a
         sta tmp
         asl a
-        asl a
+        asl a                   ; (cstyle * 10: stynames' names are 10)
         adc tmp
         tax
         ldy #0
 -       lda stynames,x
         cpy #0                  ; the first letter upper case
         bne +
-        cmp #27
+        cmp #27                 ; (1-26: a letter)
         bcs +
         ora #$40
 +       sta SCR_SCREEN + STROW*40 + 3,y
@@ -3170,7 +3207,7 @@ stname9 lda #C_WHT
         lda smode               ; the mode, yellow when not the style's own
         asl a
         clc
-        adc smode
+        adc smode               ; (smode * 3: 3 characters a mode)
         tax
         ldy #0
 -       lda modenames,x
@@ -3179,7 +3216,7 @@ stname9 lda #C_WHT
         ora #$40
 +       sta SCR_SCREEN + STROW*40 + 13,y
         lda #C_LGR
-        cpx #3
+        cpx #3                  ; (X 3 and up: smode not 0)
         bcc +
         lda #C_YEL
 +       sta SCR_COLRAM + STROW*40 + 13,y
@@ -3190,7 +3227,7 @@ stname9 lda #C_WHT
         ldx #3                  ; the bars A-D (17-20)
 -       txa
         clc
-        adc #$41
+        adc #$41                ; "A"
         sta SCR_SCREEN + STROW*40 + 17,x
         lda #C_GRY
         cpx eslot
@@ -3250,7 +3287,7 @@ message stx gp
         sta SCR_SCREEN + SETROW*40 + 1,y
         iny
         bne -
-+       lda #150
++       lda #150                ; 150 frames: 3 seconds
         sta msgt
         rts
 
@@ -3279,7 +3316,7 @@ infos   lda helpon              ; (help up: nothing; the disk page: its
 +       lda dirty
         bne +
         rts
-+       asl a
++       asl a                   ; (C = bit 7)
         bcc infst
         lda #40                 ; (~12000 cycles)
         jsr roomy               ; all: when the frame has room for it (else
@@ -3294,7 +3331,7 @@ infos   lda helpon              ; (help up: nothing; the disk page: its
         jsr songline
         jmp ui_tick
 infst   asl a                   ; $20: an edit, the steps
-        asl a
+        asl a                   ; (C = bit 5)
         bcc +
         lda #100                ; (~8000 cycles)
         jsr roomy
@@ -3340,6 +3377,7 @@ sdirty  lda #$80
         sta dirty
         rts
 
+; the screen rows' addresses, rows 0-24 (+ COLOFS: colour RAM's)
 rowlo   .byte <(SCR_SCREEN + range(25) * 40)
 rowhi   .byte >(SCR_SCREEN + range(25) * 40)
 
@@ -3350,7 +3388,7 @@ help_open
         ldx #0
 -       .for r = 0, r < 520, r += 130
         lda SCR_SCREEN + HELPROW*40 + r,x
-        sta helpbuf + r,x
+        sta helpbuf + r,x       ; the panel and its colours kept
         lda SCR_COLRAM + HELPROW*40 + r,x
         sta helpbuf + 520 + r,x
         lda helptext + r,x
@@ -3370,7 +3408,7 @@ help_open
         lda #C_LGR
 -       sta (gp),y
         dey
-        cpy #8
+        cpy #8                  ; (columns 8-39)
         bcs -
         lda #C_YEL
         cpx #0                  ; (the frame's top and bottom: grey)
@@ -3379,17 +3417,18 @@ help_open
         bne ++
 +       lda #C_LGR
 +
--       sta (gp),y
+-       sta (gp),y              ; (columns 1-7)
         dey
         bne -
         lda #C_LGR
-        sta (gp),y
+        sta (gp),y              ; (column 0: the frame)
         dex
         bpl ---
         lda #1
         sta helpon
         rts
 
+; the keys while the help is up: any new key or joystick press closes it
 helpkeys
         lda joyn
         bne help_close
@@ -3399,6 +3438,7 @@ helpkeys
         dex
         bpl -
         rts
+; the panel back as it was, all redrawn next
 help_close
         ldx #0
 -       .for r = 0, r < 520, r += 130
@@ -3459,6 +3499,7 @@ ptrspr  .byte $c0, 0, 0, $e0, 0, 0, $f0, 0, 0, $f8, 0, 0, $fc, 0, 0
 G_FLOP  = [$67, $77, $68, $69, $6a, $74, $78, $79, $7f, $e0, $e3, $e6, $ed, $ee, $ef, $fd]
 custgc  .byte G_FLOP, G_DISK
 NCUSTG  = len(G_FLOP) + 1
+; (8 bytes a glyph, in custgc's order)
 custg
         .byte $ff,$ff,$f0,$f0,$f3,$f0,$f0,$f0
         .byte $ff,$ff,$00,$00,$ff,$00,$00,$00
@@ -3479,3 +3520,45 @@ custg
         .byte $ff,$81,$ff,$e7,$db,$e7,$f7,$ff
 
 uifont  .binary "../gen/uifont.bin"
+
+; ------------------------------------------------------------------ beat pulse
+; [x] Beat pulse (the Drums page; not saved with songs): a kick, boom, snare,
+; bap or clap lights the border in its colour on the grid (drcol), for
+; 3 frames, then medium grey for 2, then the wall's dark grey again. Only on
+; the main screen (the title's bars use the border): pulse_frame runs from
+; the main loop.
+PULSELEN = 5
+bpulse  .byte 1                 ; the box (1: on)
+ptime   .byte 0                 ; frames left
+pcol    .byte 0                 ; the hit's colour
+
+; A = the drum role just started (1-14): a beat sound starts a pulse (keeps A)
+pulse_hit
+        cmp #6                  ; roles 1-5: BD BM SN BP CP
+        bcs ph9
+        ldx bpulse
+        beq ph9
+        tax
+        lda drcol-1,x
+        sta pcol
+        lda #PULSELEN
+        sta ptime
+        txa
+ph9     rts
+
+; once a frame (the main loop): the border's colour for this frame
+pulse_frame
+        lda ptime
+        beq pf9
+        dec ptime
+        lda ptime
+        cmp #2                  ; 4..2 left: the colour; 1: grey; 0: wall
+        bcc +
+        lda pcol
+        bcs ++                  ; (always)
++       cmp #1
+        lda #C_GRY
+        bcs +
+        lda #SCR_WALL_BG
++       sta $d020
+pf9     rts

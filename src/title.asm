@@ -119,8 +119,8 @@ tloop   lda #T_BAR_END-T_BAR_TOP+1-T_NBAD   ; the lines without the bad ones
         jsr tkeys
         lda title_quit          ; (title_tick may end it too)
         beq +
-        sec
-+       php
+        sec                     ; C = 1: done (tkeys' C, or this)
++       php                     ; (C kept over the line check)
         lda $d012               ; how far the work got (bars at 164)
         cmp title_endline
         bcc +
@@ -183,14 +183,14 @@ tpages  ldy twrow
         jsr tcopy
         inc twrow
         rts
-+       lda ttime
++       lda ttime               ; ttime - 1 (16 bits)
         bne +
         dec ttime+1
 +       dec ttime
         lda ttime
         ora ttime+1
         bne +
-        lda tpage
+        lda tpage               ; time up: the other page, its time, the wipe
         eor #1
         sta tpage
         tax
@@ -206,8 +206,8 @@ tptimehi .byte >T_PAGE0, >T_PAGE1
 
 ; copy row Y (0-9) of page tpage to the screen; keeps Y
 tcopy   sty t_tmp
-        lda tpage
-        beq +
+        lda tpage               ; X = the row's index in the source tables
+        beq +                   ; (page 1's rows after page 0's)
         tya
         clc
         adc #T_PAGE_ROWS
@@ -227,7 +227,7 @@ tcopy   sty t_tmp
         sta t_dstk
         lda tdsthi,y
         sta t_dst+1
-        clc
+        clc                     ; its colour RAM: $1800 up, the same low byte
         adc #>(SCR_COLRAM-SCR_SCREEN)
         sta t_dstk+1
         ldy #39
@@ -240,7 +240,9 @@ tcopy   sty t_tmp
         ldy t_tmp
         rts
 
-TROWS    = range(T_PAGE_ROWS) * 40
+; each page row's address, indexed by row: the codes and colours of page 0
+; then page 1 (tpage*.., title.inc), and its place on the screen
+TROWS    = range(T_PAGE_ROWS) * 40   ; (a list: 0, 40, 80 ...)
 tsrclo  .byte <(tpage0c + TROWS), <(tpage1c + TROWS)
 tsrchi  .byte >(tpage0c + TROWS), >(tpage1c + TROWS)
 tsrcklo .byte <(tpage0k + TROWS), <(tpage1k + TROWS)
@@ -256,7 +258,7 @@ tscroll dec t_sx
         bpl tswave
         lda #7
         sta t_sx
-        ldx #0
+        ldx #0                  ; the row a character left
 -       lda SCR_SCREEN+T_PROMPT_ROW*40+1,x
         sta SCR_SCREEN+T_PROMPT_ROW*40,x
         inx
@@ -289,11 +291,14 @@ tswave  lda tframe              ; colour wave, moving the text's way
         dex
         bpl -
         rts
+; the wave's 16 colours, indexed by (column + frame / 2) & 15
 twave   .byte 1, 1, 15, 15, 12, 12, 15, 15, 1, 1, 3, 3, 14, 14, 3, 3
 
 ; The bars' colours for the next frame, a line each: the wall colour, then
 ; every bar of tbardef (the farthest first) at its place on the sine. Page
-; 1 (the keys): no bars.
+; 1 (the keys): no bars. tbardef (title.inc), a bar each: two sine phases,
+; then its colours a line each, ended by a byte with bit 7 set; its top
+; line is tsin[2 * frame + phase 0] + tsin[3 * frame + phase 1] / 2.
 tbuild  lda #SCR_WALL_BG
         ldx #T_BAR_LINES-1
 -       sta tbuf,x
@@ -323,12 +328,12 @@ tbnext  lda tframe
         adc t_tmp
         tay                     ; the bar's top line
 -       lda tbardef+2,x
-        bmi +
+        bmi +                   ; (the bar's end)
         sta tbuf,y
         iny
         inx
-        bne -
-+       inx
+        bne -                   ; (always)
++       inx                     ; past its phases and the end: the next bar
         inx
         inx
         cpx #tbardef_end-tbardef

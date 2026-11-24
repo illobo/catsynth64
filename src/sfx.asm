@@ -12,7 +12,8 @@
 ;
 ; CatSynth: with a second SID (sid2.asm) voices 4 and 5 (X = 3, 4) are its
 ; voices 1 and 2: the singer's dub echoes and the harmony meow, through
-; SID 2's own filter. Their register offset (sidoff) is SID 2's address
+; SID 2's own filter; voice 6 (X = 5) is its voice 3, the bass delay
+; (seq.asm bdelay). Their register offset (sidoff) is SID 2's address
 ; - $d400, so only SIDs at $d420-$d4e0 fit. Mono: nvoice = 2, the loop
 ; never sees them.
 
@@ -39,18 +40,20 @@ SX_MF    = 18             ; w, cut: a meow frame (seq.asm's contour), waits a fr
 SX_MFV   = 19             ; w, cut, v: the same plus v (signed 1/16 semitones) vibrato
 SX_STOP  = 20             ; stop the script, gate untouched (a held note)
 
+; the hard restart, in a script: waveform and gate off, ADSR 0, a frame
 HRESTART .macro
         .byte SX_CTRL, $00, SX_ADSR, $00, $00, SX_WAIT, 1
         .endm
 
 ; A = FX_xxx; keeps X and Y
+; (its script on its voice, fxvoice, from the next frame, the slides stopped)
 sfx_play
         php
-        sei
+        sei                     ; (the IRQ's sfx must not see it half set)
         stx sfxx
         sty sfxy
         tay
-        ldx fxvoice,y
+        ldx fxvoice,y           ; X = its voice
         lda fxlo,y
         sta sptrl,x
         lda fxhi,y
@@ -67,17 +70,20 @@ sfx_play
         plp
         rts
 
+; once a frame (the bottom IRQ): each voice, nvoice down to 0, its glide,
+; slides and chop, then its script unless it waits; then the after-voices
+; work (squelch, dubflt, scduck). Changes A, X, Y.
 sfx     ldx nvoice
 sfxloop stx sfxv
         lda sidoff,x
-        sta rofs
+        sta rofs                ; rofs = this voice's registers - $d400
         lda gslc,x              ; glide: pitch += gd a frame
         beq glnone
         dec gslc,x
         ldy #0
         lda gd,x
         bpl glpos
-        dey
+        dey                     ; (Y: gd's sign, the high byte)
 glpos   clc
         adc ptl,x
         sta ptl,x
@@ -129,20 +135,14 @@ csl1    clc
         lsr a                   ; C = frame bit 0
         lda ctl,x
         bcc chopon
-        and #$0f
+        and #$0f                ; (the waveform bits 4-7 off)
 chopon  sta $d404,y
-+       lda swait,x
++       lda swait,x             ; waiting: a frame less; the last one runs on
         beq +
         dec swait,x
         bne sfxnext
 +       lda sptrh,x
         beq sfxnext             ; idle
-        .if CHECKPTR
-        cmp #$88
-        bcc ckp1
-ckjam1  .byte $02
-ckp1
-        .endif
         sta sp+1
         lda sptrl,x
         sta sp
@@ -151,37 +151,36 @@ ckp1
         lda sp
         sta sptrl,x
         lda sp+1
-        .if CHECKPTR
-        cmp #$88
-        bcc ckp2
-ckjam2  .byte $02
-ckp2    lda sp+1
-        .endif
         sta sptrh,x
 sfxnext dex
         bmi +
-        jmp sfxloop
+        jmp sfxloop             ; (too far for a branch)
 +       jsr squelch             ; then the bass's squelch, the dub filter
         jsr dubflt              ; and the sidechain duck
         jmp scduck
 
 ; run commands until a wait or the end; X = voice
+; (sp = the command; each handler goes on with sxadv / sfxrun, or returns
+; to end the voice's frame)
 sfxrun  ldy #0
         lda (sp),y
         asl a
         tay
-        lda sxcmds+1,y
-        pha
+        lda sxcmds+1,y          ; the handler's address - 1, pushed: the rts
+        pha                     ; below jumps to it
         lda sxcmds,y
         pha
         ldy #1                  ; Y = first argument
         rts
 
+; the SX_* handlers - 1 (for the rts above), indexed by the command
 sxcmds  .word sx_end-1, sx_adsr-1, sx_freq-1, sx_ctrl-1, sx_wait-1, sx_pw-1
         .word sx_cut-1, sx_pslide-1, sx_wslide-1, sx_cslide-1, sx_modf-1
         .word sx_jump-1, sx_route-1, sx_chop-1, sx_call-1, sx_poke-1
         .word sx_note-1, sx_glide-1, sx_mf-1, sx_mfv-1, sx_stop-1
 
+; SX_CALL lo, hi: run the script there, then the next one here (one level:
+; a call inside a call loses the first return)
 sx_call clc                     ; return to the next command
         lda sp
         adc #3
@@ -191,6 +190,7 @@ sx_call clc                     ; return to the next command
         sta reth,x
         jmp sx_jump
 
+; SX_POKE zp, value: a zero page byte set (sfxy: a spare for the address)
 sx_poke lda (sp),y
         sta sfxy
         iny
@@ -200,11 +200,13 @@ sx_poke lda (sp),y
         lda #3
         jmp sxadv
 
+; SX_CHOP on: 1 = the 25 Hz chop (sfx), 0 = off
 sx_chop lda (sp),y
         sta chop,x
         lda #2
         jmp sxadv
 
+; SX_JUMP lo, hi: go on at that script (sx_call too)
 sx_jump lda (sp),y
         pha
         iny
@@ -214,16 +216,19 @@ sx_jump lda (sp),y
         sta sp
         jmp sfxrun
 
+; SX_ROUTE v: SID 1's $d417 = v, through wroute (whatever the voice)
 sx_route
         lda (sp),y
         jsr wroute
         lda #2
         jmp sxadv
 
+; SX_END: the gate off (the release runs), the chop off; then back to the
+; caller of an SX_CALL, or idle
 sx_end  lda #0
         sta chop,x
         lda ctl,x
-        and #$fe
+        and #$fe                ; gate bit off
         ldy rofs
         sta $d404,y
         lda reth,x              ; the end of a called script: go back
@@ -237,6 +242,7 @@ sx_end  lda #0
 +       sta sp+1                ; pointer hi 0 = idle
         rts
 
+; SX_ADSR ad, sr: the envelope, the sustain through the cat's Level
 sx_adsr lda (sp),y
         pha
         iny
@@ -246,12 +252,13 @@ sx_adsr lda (sp),y
         bne +
         jsr srlow
 +       ldy rofs
-        sta $d406,y
+        sta $d406,y             ; sustain (high nibble), release
         pla
-        sta $d405,y
+        sta $d405,y             ; attack (high nibble), decay
         lda #3
         jmp sxadv
 
+; SX_FREQ lo, hi: the frequency as it is (the drums': through Tune)
 sx_freq lda (sp),y
         sta flo,x
         iny
@@ -268,8 +275,10 @@ sx_freq lda (sp),y
         lda #3
         jmp sxadv
 
+; SX_CTRL v: the control register $d404 (bit 0 gate, 1 sync, 2 ring mod,
+; 3 test, 4 triangle, 5 sawtooth, 6 pulse, 7 noise), the bass's wave by Wave
 sx_ctrl lda (sp),y
-        cpx #0                  ; the bass (and its delay): the wave
+        cpx #0                 ; the bass (and its delay): the wave
         beq +
         cpx #5
         bne ++
@@ -280,6 +289,7 @@ sx_ctrl lda (sp),y
         lda #2
         jmp sxadv
 
+; SX_WAIT n: the script waits n frames; the end of this frame's run
 sx_wait lda (sp),y
         sta swait,x
         dec swait,x             ; this frame counts as the first
@@ -291,6 +301,8 @@ sx_wait lda (sp),y
         inc sp+1
 +       rts
 
+; SX_PW lo, hi: the pulse width (12 bits, hi's low nibble), thinner by the
+; cat's Level
 sx_pw   lda (sp),y
         sta pwl,x
         iny
@@ -304,12 +316,14 @@ sx_pw   lda (sp),y
         lda #3
         jmp sxadv
 
+; SX_CUT c: the cutoff (8580 scale)
 sx_cut  lda (sp),y
         jsr dark                ; darker for the echoes
         jsr wcut
         lda #2
         jmp sxadv
 
+; SX_PSLIDE dlo, dhi, n: the frequency + d a frame, for n frames (sfx)
 sx_pslide
         lda (sp),y
         sta pdl,x
@@ -322,6 +336,7 @@ sx_pslide
         lda #4
         jmp sxadv
 
+; SX_WSLIDE dlo, dhi, n: the pulse width + d a frame, for n frames
 sx_wslide
         lda (sp),y
         sta wdl,x
@@ -334,6 +349,7 @@ sx_wslide
         lda #4
         jmp sxadv
 
+; SX_CSLIDE d, n: the cutoff + d (signed) a frame, for n frames
 sx_cslide
         lda (sp),y
         sta cdl,x
@@ -343,6 +359,7 @@ sx_cslide
         lda #3
         jmp sxadv
 
+; SX_MODF lo, hi: the frequency of voice X's ring-mod / sync source (modoff)
 sx_modf ldy modoff,x
         sty sfxy
         ldy #1
@@ -354,9 +371,9 @@ sx_modf ldy modoff,x
         sta $d401,y
         pla
         sta $d400,y
-        lda #3
+        lda #3                  ; (on into sxadv)
 
-sxadv   clc                     ; skip A bytes, next command
+sxadv   clc                   ; skip A bytes, next command
         adc sp
         sta sp
         bcc +
@@ -387,8 +404,8 @@ wcut    cpx #3
         ldy sidmodel
         bne +
         tay
-        lda cut6581,y
-+       sta $d416
+        lda cut6581,y           ; (indexed by the 8580 cutoff)
++       sta $d416               ; cutoff bits 3-10 (the low 3 bits stay 0)
         rts
 wcut2   cpx cut2own
         beq wc2own
@@ -456,13 +473,13 @@ wr8     lda wrv
 wr9     rts
 wrv     .byte 0
 route1  .byte 0
-wrbit   .byte 0
 
+; the NMI vector's target (catsynth.asm): RESTORE does nothing
 nmi_off rti
 
 ; all SID registers 0, then volume and filter; sid_detect must have run
 sid_init
-        ldx #$18
+        ldx #$18                ; $d400-$d418
         lda #0
 -       sta $d400,x
         dex
@@ -485,12 +502,12 @@ sid_detect
         lda #$00
         sta $d40e
         lda #$10
-        sta $d40f
+        sta $d40f               ; voice 3 frequency $1000
         lda #$30                ; triangle + sawtooth, no gate
         sta $d412
         ldx #0
-        ldy #0
--       lda $d41b
+        ldy #0                  ; Y = the non-zero reads
+-       lda $d41b               ; OSC3: voice 3's waveform output
         beq +
         iny
 +       dex
@@ -500,7 +517,7 @@ sid_detect
         cpy #64
         bcc +
         inc sidmodel
-+       lda #$08
++       lda #$08                ; voice 3 silent again (test bit, then 0)
         sta $d412
         lda #0
         sta $d412
@@ -554,6 +571,8 @@ srlvl   sta srtmp
         rts
 srl9    lda srtmp
         rts
+; each voice's Level byte for getlvl, 1 + its offset from twside (0: none):
+; the bass and its delay twside, the meow voices tflags, the drums none
 vlvsrc  .byte 1, tflags-twside+1, 0, tflags-twside+1, tflags-twside+1, 1
 
 ; voice X: its cat's level 0 (as made) - 8 in A and Y (Z: 0); the bass's
@@ -563,19 +582,19 @@ getlvl  lda vlvsrc,x
         beq gl9
         tay
         lda twside-1,y
-        lsr a
+        lsr a                   ; (the high nibble)
         lsr a
         lsr a
         lsr a
         cpy #1
-        beq +
+        beq +                   ; twside's: the level itself
         tay
-        lda sizelv,y
+        lda sizelv,y            ; tflags': a Cat Size
 +       tay
 gl9     rts
-sizelv  .byte 0, 2, 6, 8
-lvmul   .byte 16, 14, 12, 11, 10, 8, 7, 6, 5
-lvpw    .byte 16, 15, 14, 13, 12, 11, 10, 9, 8
+sizelv  .byte 0, 2, 6, 8        ; Cat Size 0-3 -> its level
+lvmul   .byte 16, 14, 12, 11, 10, 8, 7, 6, 5   ; level 0-8 -> sustain * n/16
+lvpw    .byte 16, 15, 14, 13, 12, 11, 10, 9, 8 ; level 0-8 -> pulse distance * n/16
 
 ; A = the pulse width's high byte for voice X: with its cat's Level the
 ; pulse thinner (its distance from 0 or 100% x lvpw/16), so the attack's
@@ -615,8 +634,8 @@ pwlvl   sta srtmp
 +       rts
 pwl9    lda srtmp
         rts
-srm     .byte 0
-srs     .byte 0
+srm     .byte 0                 ; srlvl, pwlvl: the factor (sixteenths)
+srs     .byte 0                 ; ...the sustain, distance, then the product
 
 ; flo/fhi,x of the drum voice * the kit's tune: twtune 8 as made, each step
 ; 1/16 up or down (0: half, 16: one and a half); at most $ffff
@@ -653,15 +672,15 @@ dtup    lda flo,x               ; up: f += f/16, dtn times
         adc dtd+1
         sta fhi,x
         bcc +
-        lda #$ff
+        lda #$ff                ; (past $ffff: the top)
         sta flo,x
         sta fhi,x
         rts
 +       dec dtn
         bne dtup
 dt9     rts
-dtn     .byte 0
-dtd     .word 0
+dtn     .byte 0                 ; Tune - 8, counted to 0
+dtd     .word 0                 ; f / 16
 
 ; A = control byte of the bass: its waveform as the Wave setting (0: the
 ; style's, 1 pulse, 2 saw, 3 triangle), the gate and the rest kept
@@ -671,12 +690,12 @@ bwave   pha
         beq bw9
         tay
         pla
-        and #$0f
+        and #$0f                ; (the gate, sync, ring, test bits kept)
         ora bwaves,y
         rts
 bw9     pla
         rts
-bwaves  .byte 0, $40, $20, $10
+bwaves  .byte 0, $40, $20, $10  ; Wave 1-3 -> pulse, sawtooth, triangle bits
 
 ; once a frame, after the voices: the bass's squelch (Meowize + Res boost,
 ; seq.asm trig_bass sets bfenv): each bass note opens SID 1's filter, which
@@ -686,7 +705,7 @@ BFPEAK  = 170
 squelch lda bfenv
         beq sq9
         sec
-        sbc #11
+        sbc #11                 ; (BFPEAK / 11: about 15 frames to 0)
         bcs +
         lda #0
 +       sta bfenv
@@ -695,10 +714,10 @@ squelch lda bfenv
         lda bfenv
         clc
         adc #14                 ; (closed: 14)
-        ldx #1
+        ldx #1                  ; (as the meow voice: SID 1's filter)
         jmp wcut
 sq9     rts
-bfenv   .byte 0
+bfenv   .byte 0                 ; the squelch's envelope, BFPEAK down to 0
 
 ; once a frame, after the voices: the Dub filter (tflags bit 2; seq.asm
 ; bdelay sets dfenv): each repeat of the bass delay opens SID 2's filter
@@ -709,7 +728,7 @@ DFPEAK  = 96
 dubflt  lda dfenv
         beq df9
         sec
-        sbc #3
+        sbc #3                  ; (DFPEAK / 3: 32 frames)
         bcs +
         lda #0
 +       sta dfenv
@@ -718,7 +737,7 @@ dubflt  lda dfenv
         ldx #5                  ; low harmonics, over about 32 frames, the
         jmp wcut                ; resonance's peak moving through them)
 df9     rts
-dfenv   .byte 0
+dfenv   .byte 0                 ; the Dub filter's envelope, DFPEAK down to 0
 
 ; once a frame, after the voices: the sidechain. A kick (trig_drum) sets
 ; scdk = SCLEN; the bass's pulse width is then pw * (256 - 3 * depth *
@@ -739,13 +758,13 @@ scduck  lda scdk
         beq scout               ; the last frame: the bass's own pw again
         ldy #0
         sty scf
--       clc
+-       clc                     ; scf = frames left * depth (adds)
         adc scf
         sta scf
         dec scm
         beq +
         lda scdk
-        bne -
+        bne -                   ; (always: scdk isn't 0 here)
 +       lda scf                 ; (<= 8 * 11 = 88)
         cmp #85
         bcc +
@@ -781,21 +800,21 @@ scduck  lda scdk
         sta $d402
         lda scr+1
         sta $d403
-sc9     rts
+sc9     rts                     ; (a label nothing uses)
 scout   lda pwl
         sta $d402
         lda pwh
         sta $d403
         rts
-scdk    .byte 0
-scm     .byte 0
-scf     .byte 0
-scp     .word 0
-scr     .word 0
+scdk    .byte 0                 ; frames of the duck left
+scm     .byte 0                 ; depth, then the factor (shifted out)
+scf     .byte 0                 ; depth * frames left
+scp     .word 0                 ; the bass's pulse width
+scr     .word 0                 ; ...times the factor / 256
 
 NV      = 6                     ; voices: SID 1's three, SID 2's three (the
                                 ; third: the bass delay)
-nvoice  .byte 2                 ; the last voice the player runs (4: SID 2 found)
+nvoice  .byte 2                 ; the last voice the player runs (5: SID 2 found)
 sid2    .word 0                 ; SID 2's address, 0 = none (sid2.asm)
 sidmodel2 .byte 0               ; its model, as sidmodel
 cutoff2 .byte 0                 ; its cutoff, as cutoff
@@ -805,30 +824,31 @@ sidoff  .byte 0, 7, 14, $20, $27, $2e   ; SID 2's three: set by sid2_use
 modoff  .byte 14, 0, 7, $2e, $20, $27   ; ring-mod source of each voice
 vslot   .byte 0, 0, 0, 1, 2, 0  ; the meow contour each voice reads (pitch.asm)
 ctour   .fill 3*8               ; contours: the meow, its echo, the harmony
-sptrl   .fill NV
+; each voice's state, indexed by X = voice
+sptrl   .fill NV              ; the script's next command (high 0: idle)
 sptrh   .fill NV
-swait   .fill NV
-ctl     .fill NV
-flo     .fill NV
+swait   .fill NV              ; frames still to wait (SX_WAIT)
+ctl     .fill NV              ; the control register as last written
+flo     .fill NV              ; frequency
 fhi     .fill NV
-pwl     .fill NV
+pwl     .fill NV              ; pulse width
 pwh     .fill NV
-pdl     .fill NV
+pdl     .fill NV              ; pitch slide: d a frame, frames left
 pdh     .fill NV
 pslc    .fill NV
-wdl     .fill NV
+wdl     .fill NV              ; pulse width slide: d a frame, frames left
 wdh     .fill NV
 wslc    .fill NV
-cdl     .fill NV
+cdl     .fill NV              ; cutoff slide: d a frame, frames left
 cslc    .fill NV
-chop    .fill NV
-retl    .fill NV
+chop    .fill NV              ; the 25 Hz chop on
+retl    .fill NV              ; SX_CALL's return (reth 0: none)
 reth    .fill NV
 ptl     .fill NV              ; pitch, 1/16 semitones from C0
 pth     .fill NV
 vnote   .fill NV              ; the note the sequencer gave the voice (semitones)
-gd      .fill NV
-gslc    .fill NV
+gd      .fill NV              ; glide: d a frame (signed 1/16 semitones),
+gslc    .fill NV              ; frames left
 cload   .byte 0               ; the contour in zero page (pitch.asm)
 sfxstate_end
         .cerror sfxstate_end - sptrl > 255, "the state is cleared with dex/bne"

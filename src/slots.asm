@@ -26,11 +26,12 @@ pslot   .byte 0                 ; a slot to switch to (+1), 0 none
 pstyle  .byte 0                 ; a style to give the song (+1), 0 none
 spick   .byte 0                 ; the style list is up (with tweakon)
 sname   .fill SNAMEL            ; the open slot's name (length 0: the style's)
-sli     .byte 0
-mcn     .byte 0
-cs      .word 0
-cd      .word 0
+sli     .byte 0                 ; the loops' slot / style index
+mcn     .byte 0                 ; mcopy: the byte count (pkdraw: a scratch)
+cs      .word 0                 ; mcopy: from
+cd      .word 0                 ; ...to
 
+; each slot's address in slotmem (low bytes, high bytes), indexed by slot
 sltlo   .for i = 0, i < NSLOTS, i += 1
         .byte <(slotmem + i * SLOTLEN)
         .next
@@ -38,7 +39,8 @@ slthi   .for i = 0, i < NSLOTS, i += 1
         .byte >(slotmem + i * SLOTLEN)
         .next
 
-; copy A bytes (1-255) from cs to cd
+; copy A bytes (1-255) from cs to cd (the addresses patched into mc1 / mc2);
+; cs and cd stay as they were
 mcopy   sta mcn
         lda cs
         sta mc1+1
@@ -49,13 +51,14 @@ mcopy   sta mcn
         lda cd+1
         sta mc2+2
         ldy #0
-mc1     lda $ffff,y
-mc2     sta $ffff,y
+mc1     lda $ffff,y             ; (cs)
+mc2     sta $ffff,y             ; (cd)
         iny
         cpy mcn
         bne mc1
         rts
 
+; the 16-bit value into the word at dst
 setw    .macro dst, value
         lda #<(\value)
         sta \dst
@@ -64,6 +67,7 @@ setw    .macro dst, value
         .endm
 
 ; X = slot: the working copy (song, tweaks, sname) into it / out of it
+; (slot_put / slot_fetch; a slot is laid out the same way, SLOTLEN bytes)
 slot_put
         lda sltlo,x
         sta cd
@@ -122,7 +126,7 @@ csnext  lda cs
         sta cs
         bcc +
         inc cs+1
-+       rts
++       rts                     ; (cs += SONGLEN)
 
 ; the ten styles' songs into the ten slots (the web edition: the ten
 ; techno songs); slot 1 open
@@ -143,7 +147,7 @@ slots_init
 slots_techno
         ldx #0
 -       stx sli
-        lda tslo,x
+        lda tslo,x              ; song sli's packed bytes -> disk_buf
         sta cs
         lda tshi,x
         sta cs+1
@@ -195,19 +199,19 @@ slots_defaults
 ; the working copy: a new, empty song in its style (its tempo, sounds and
 ; settings as made; one bar, nothing on it)
 slot_blank
-        lda song
+        lda song                ; the style (song+0's low nibble)
         and #$0f
         tax
         jsr seq_load
         lda #0
         sta sname
         ldx #192                ; (192 bytes: X 192..1)
--       sta song+20,x
+-       sta song+20,x           ; the patterns, song+21..+212, empty
         dex
         bne -
-        sta song+5
+        sta song+5              ; the chain: bar A
         lda #1
-        sta song+4
+        sta song+4              ; ...once
         rts
 
 ; the working copy plays: the style's harmony, from the top, the panel shown
@@ -227,10 +231,10 @@ songshow
         jsr findchain
         jsr ui_rescale
         jsr autoview
-        lda #$ff
+        lda #$ff                ; no step / bar drawn yet: all redrawn
         sta lstep
         sta lbar
-        lda #$80
+        lda #$80                ; the info and song line too
         sta dirty
         jmp status
 
@@ -244,10 +248,10 @@ slot_select
         rts
 +       ldx running
         bne +
-        jmp slot_switch
+        jmp slot_switch         ; stopped: at once
 +       clc
         adc #1
-        sta pslot
+        sta pslot               ; (slot + 1: slots_tick does it)
         sec
         sbc #1
         jsr slnum               ; "Next bar: slot N"
@@ -255,7 +259,7 @@ slot_select
         ldy #>msg_nslot
         jmp message
 
-; A = slot: now
+; A = slot: now (the open one put back first, so its edits stay)
 slot_switch
         pha
         ldx curslot
@@ -266,7 +270,7 @@ slot_switch
         jsr slot_fetch
         lda running
         bne +
-        jsr sfx_stop
+        jsr sfx_stop            ; stopped: the old song's notes cut
 +       jmp slot_play
 
 ; A = style: the open song with its sounds (playing: at the end of the bar)
@@ -276,11 +280,12 @@ style_select
         jmp style_apply
 +       clc
         adc #1
-        sta pstyle
+        sta pstyle              ; (style + 1)
         ldx #<msg_nstyle
         ldy #>msg_nstyle
         jmp message
 
+; A = style: now; song+0's low nibble (the mode, the high nibble, stays)
 style_apply
         sta sli
         lda song
@@ -301,10 +306,10 @@ slots_tick
         lda diskon              ; (not under the disk page or the help:
         ora helpon              ; they cover the panel)
         bne st9
-        lda running
+        lda running             ; stopped: now
         beq +
-        lda step
-        cmp #15
+        lda step                ; playing: the last frame of the bar (step
+        cmp #15                 ; 15, 1 frame left)
         bne st9
         lda stepcnt
         cmp #1
@@ -331,7 +336,7 @@ slnum   clc
         cmp #10
         bcc +
         lda #0
-+       ora #$30
++       ora #$30                ; the digit's screen code
         sta msg_nslotn
         rts
 
@@ -345,9 +350,12 @@ pick_open
         sta spick
         rts
 
+; where style n's entry goes (its key, then its name 2 columns on)
 pkrow   .byte 2, 3, 4, 5, 6, 2, 3, 4, 5, 6      ; rows 17-21 (MROW + n)
 pkcol   .byte 3, 3, 3, 3, 3, 21, 21, 21, 21, 21
 
+; the list drawn: per style its key (yellow) and its name (from ui.asm's
+; settings page code, when the page is drawn)
 pkdraw  lda #0
         sta sli
 -       ldx sli
@@ -374,7 +382,7 @@ pkdraw  lda #0
         lda #C_WHT
 +       sta pkcolr
         lda sli                 ; the name: 9 characters, the first upper case
-        asl a
+        asl a                   ; (stynames + 10 * style)
         sta mcn
         asl a
         asl a
@@ -385,8 +393,8 @@ pkdraw  lda #0
         lda #$40
         sta pkup
 -       lda stynames,x
-        cmp #27
-        bcs +
+        cmp #27                 ; a letter (screen code 1-26): + $40 is its
+        bcs +                   ; upper case
         ora pkup
 +       sta (gp),y
         lda #0
@@ -402,10 +410,11 @@ pkdraw  lda #0
         cmp #NSTYLES
         bne --
         rts
-pkup    .byte 0
-pkcolr  .byte 0
+pkup    .byte 0                 ; $40 for the name's first letter, then 0
+pkcolr  .byte 0                 ; the name's colour
 
-; a click on the list: Y = row; ccol
+; a click on the list: Y = row; ccol (the column). On a style: that style
+; (style_select); anywhere else: the list closes
 pkclick cpy #MROW+2
         bcc pk8
         cpy #MROW+7
@@ -414,7 +423,7 @@ pkclick cpy #MROW+2
         sec
         sbc #MROW+2
         ldx ccol
-        cpx #20
+        cpx #20                 ; the right column: keys 6-0 (+5)
         bcc +
         adc #4                  ; (C set: +5)
 +       pha

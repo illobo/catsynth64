@@ -5,7 +5,7 @@
 ; off: keys, sequencer, sound, cats, grids.
 ;
 ; Keys
-;   1-9, 0      style (its preset song)      SPACE   play / stop
+;   1-9, 0      song slot (SHIFT: a style)   SPACE   play / stop
 ;   + -         tempo                        CRSR    move the cursor
 ;   RETURN      the cell's left job          SHIFT+RETURN  its right job
 ;   Q A         value up / down              K       length / meow kind
@@ -14,6 +14,8 @@
 ;   E           echo delay (dub)             X       copy bar A here
 ;   DEL         clear the cursor's row       S / L   the disk page (diskui.asm)
 ;   T           the open cat's settings      CTRL+1-3  mute
+;   , .         singer transpose (SHIFT: bass)   M  the mode   H  harmony
+;   <-          live play (the looper)       RUN/STOP  help
 ; Mouse (port 1) and joystick (port 2, as a mouse: ui.asm, joy_edit): the
 ; pointer; left / right click.
 ;
@@ -23,10 +25,8 @@
 ; (diskui.asm).
 
 .weak
-DEBUG    = 0              ; make DEBUG=1: raster time in the border
 WEB      = 0              ; the web edition (make web): the ten techno songs
                           ; built in, in the slots at start (slots.asm)
-CHECKPTR = 0              ; -D CHECKPTR=1: jam on a sound script pointer past the program
 .endweak
 frame    = $02
 cdark    = $21
@@ -43,7 +43,6 @@ running  = $a1            ; 0: stopped
 joy      = $a2            ; joystick 2 held (1 = pressed: bits 0-4 up down left right fire)
 joyl     = $a3            ; ...last frame
 joyn     = $a4            ; ...pressed this frame
-joyrep   = $a5            ; frames to the next auto-repeat
 catt     = $a6            ; 3 bytes: frames the pose holds
 lstep    = $a9
 gp       = $aa            ; 2 bytes
@@ -64,15 +63,14 @@ tmp      = $d3
 tmp2     = $d4
 audt     = $d5            ; frames until an auditioned bass note is let go
 lbar     = $d6            ; the bar drawn last
-ityp     = $d7            ; inscale: Y kept
 rec      = $d8            ; looper recording
 padv     = $d9            ; the pad's step byte
 padc     = $da            ; its cat
 helpon   = $db            ; the help overlay is up
 
-KEYREP   = 4
 
-; keys: column * 8 + row of the C64 matrix
+; keys: column * 8 + row of the C64 matrix (column: the $dc00 line pulled
+; low, kbd's index; row: the $dc01 bit read)
 K_DEL    = 0*8+0
 K_RETURN = 0*8+1
 K_CRSRLR = 0*8+2
@@ -81,7 +79,6 @@ K_F1     = 0*8+4
 K_F3     = 0*8+5
 K_F5     = 0*8+6
 K_CRSRUD = 0*8+7
-K_W      = 1*8+1
 K_A      = 1*8+2
 K_S      = 1*8+5
 K_E      = 1*8+6
@@ -112,12 +109,13 @@ pressed .macro key
         lda knew + (\key >> 3)
         and #1 << (\key & 7)
         .endm
+; A = held now? (Z clear when yes)
 held    .macro key
         lda kbd + (\key >> 3)
         and #1 << (\key & 7)
         .endm
 
-        * = $0801
+        * = $0801               ; the BASIC stub: 2026 SYS start
         .word +, 2026
         .null $9e, format("%d", start)
 +       .word 0
@@ -138,7 +136,7 @@ start   sei
         ldx #$ff
         txs
         lda #0
-        ldx #$a0                ; our zero page
+        ldx #$a0                ; our zero page ($a0-$db)
 -       sta $00,x
         inx
         cpx #$dc
@@ -149,9 +147,9 @@ start   sei
 -       sta sptrl-1,x           ; (more than 128 bytes: dex/bne)
         dex
         bne -
-        lda #1
+        lda #1                  ; a step switched on: drum role 1,
         sta lastv
-        lda #13
+        lda #13                 ; bass note 13 (the root),
         sta lastv+1
         lda #$26                ; degree 5, a meow
         sta lastv+2
@@ -171,23 +169,20 @@ start   sei
         lda #$ff
         sta lstep
 
-loop    lda #$fa                ; once a frame, in the lower border
+; ------------------------------------------------------------------ main loop
+loop    lda #$fa                ; once a frame, in the lower border (line 250)
 -       cmp $d012
         bne -
-        #dbg 2
         jsr music
         jsr slots_tick          ; a slot / style switch on the bar line
-        #dbg 5
+        jsr pulse_frame         ; the border's beat pulse (ui.asm)
         jsr poses
         jsr screen_frame
-        #dbg 6
         jsr infos
-        #dbg 7
         jsr input
         jsr audition_tick
-        #dbg 0
         inc frame
--       lda $d012
+-       lda $d012               ; (off line 250 first: not twice a frame)
         cmp #$fa
         beq -
         jmp loop
@@ -204,7 +199,7 @@ title_tick
         bne +
         lda #16
         sta attbars
-        ldx cstyle
+        ldx cstyle              ; the next style, round
         inx
         cpx #NSTYLES
         bcc attstyle
@@ -216,8 +211,8 @@ attstyle  txa
         tax
         jsr seq_load            ; (not newstyle: the title owns the screen)
 +       jmp poses
-attbar    .byte $ff
-attbars   .byte 16
+attbar    .byte $ff             ; the bar seen last
+attbars   .byte 16              ; bars to go with this style
 
 ; the sequencer and the sound, once a PAL frame: on NTSC (60 Hz) every
 ; sixth frame is skipped, so songs and meows keep their PAL speed
@@ -225,7 +220,7 @@ music   lda ntsc
         beq +
         dec ntick
         bpl +
-        lda #5
+        lda #5                  ; (the sixth: no tick)
         sta ntick
         rts
 +       lda running
@@ -250,15 +245,7 @@ pal_detect
         sta ntsc
         rts
 ntsc    .byte 0
-ntick   .byte 5
-
-; make DEBUG=1: the border shows each part's raster time
-dbg     .macro colour
-        .if DEBUG
-        lda #\colour
-        sta $d020
-        .endif
-        .endm
+ntick   .byte 5                 ; NTSC frames to the one skipped
 
 ; ------------------------------------------------------------------ input
 ; the keyboard matrix into kbd (1 = held) and knew (pressed now); joystick
@@ -266,18 +253,19 @@ dbg     .macro colour
 ; lines too, so the keyboard is not scanned then.
 input   jsr input1
         lda #$7f                ; port 1's POTs (the mouse) for next frame
+                                ; ($dc00 bits 7/6 = 0/1: SID reads port 1)
         sta $dc00
         rts
 input1  jsr mouse_fake          ; (c64bridge's stand-in for a mouse)
         jsr mouse_read          ; C: a mouse button held (ui.asm)
         php
-        lda #$ff
+        lda #$ff                ; no column pulled: $dc00 reads port 2 alone
         sta $dc00
         lda $dc00
-        eor #$ff
+        eor #$ff                ; (low active: 1 = pressed)
         and #$1f
         sta joy
-        eor joyl
+        eor joyl                ; new: down now, not last frame
         and joy
         sta joyn
         lda joy
@@ -293,7 +281,7 @@ input1  jsr mouse_fake          ; (c64bridge's stand-in for a mouse)
         dex
         bpl -
         jmp dispatch
-kscan   lda colmask,x
+kscan   lda colmask,x           ; column X pulled low: its rows on $dc01
         sta $dc00
         lda $dc01
         eor #$ff
@@ -346,6 +334,7 @@ dispatch
 +       jsr keys_edit
         jmp joy_edit
 
+; $dc00 for keyboard column 0-7: that line low
 colmask .byte $fe, $fd, $fb, $f7, $ef, $df, $bf, $7f
 
 ; the digit keys 1-9, 0 as (column, row bit); X = digit index 0-9
@@ -377,17 +366,21 @@ keys_mute
         jmp mutetog
 +       rts
 
+; Z clear: a SHIFT key held
 shifted #held K_LSHIFT
         bne +
         #held K_RSHIFT
 +       rts
 
+; the keys that work while editing and on a settings page: slots, styles,
+; play / stop, tempo, echo, chain, transposes, mode, harmony, live play,
+; the disk page
 keys_play
         #held K_CTRL            ; (CTRL + 1-3: a mute, keys_mute)
         bne +
         jsr digit               ; 1-0: a song slot; SHIFT: a style's sounds;
         bcs +                   ; the style list up: a style (slots.asm)
-        cpx #NSLOTS
+        cpx #NSLOTS             ; (the ten digits: all slots)
         bcs +
         stx kpdig
         lda spick
@@ -405,7 +398,7 @@ kpst2   lda kpdig
 +       #pressed K_SPACE
         beq +
         jsr startstop
-+       #pressed K_PLUS
++       #pressed K_PLUS         ; (tempo: frames a step, 4-15: + is fewer)
         beq +
         lda tempo
         cmp #5
@@ -481,12 +474,13 @@ kplive  lda #1
 +       jmp disk_open
 +       rts
 ECHOS    = [0, 2, 3, 4, 6, 8]
-echos   .byte ECHOS
+echos   .byte ECHOS             ; E's echo delays, in steps
 
+; tempo changed: into the song (song+1), the swing kept under it
 retempo lda swing               ; the swing stays under the tempo
         cmp tempo
         bcc +
-        lda tempo
+        lda tempo               ; (C set: - 1)
         sbc #1
         jsr setswing
 +       lda tempo
@@ -496,6 +490,8 @@ retempo lda swing               ; the swing stays under the tempo
         sta dirty
         rts
 
+; the editing keys (the grids up, no settings page): cursor, cells, values,
+; bars, clear, copy
 keys_edit
         #pressed K_CRSRLR
         beq ++
@@ -514,7 +510,7 @@ keys_edit
 +       #pressed K_RETURN       ; the cell's left / right job (ui.asm act)
         beq ++
         jsr shifted
-        beq +
+        beq +                   ; (not shifted: A = 0, the left job)
         lda #1
 +       jsr act
 +       #pressed K_T            ; the meows' tweaks page
@@ -620,14 +616,14 @@ joy_edit
         sta mseen
         jsr mhover
 jfire   lda joy
-        and #$10
+        and #$10                ; fire
         beq jup
         lda jfhold              ; held: half a second is a right click
         cmp #255
         bcs +
         inc jfhold
 +       lda jfhold
-        cmp #25
+        cmp #25                 ; 25 PAL frames
         bne +
         lda #1
         sta jfr
@@ -648,12 +644,13 @@ jclr    lda #0
         sta jfr
         sta fused
 +       rts
-jheld   .byte 0
-jdir    .byte 0
-jsp     .byte 0
-jfhold  .byte 0
-jfr     .byte 0
+jheld   .byte 0                 ; frames a direction is held (to 40)
+jdir    .byte 0                 ; the directions, shifted out
+jsp     .byte 0                 ; pixels a frame
+jfhold  .byte 0                 ; frames fire is held (to 255)
+jfr     .byte 0                 ; that press made a right click
 
+; SPACE: play (from the top) / stop
 startstop
         lda running
         eor #1
@@ -671,7 +668,7 @@ sfx_stop
         lda ctl,x
         and #$fe
         sta ctl,x
-        ldy sidoff,x
+        ldy sidoff,x            ; the voice's control register, gate off
         sta $d404,y
         dex
         bpl -
@@ -693,6 +690,7 @@ newstyle
 kpdig   .byte 0
 
 ; ------------------------------------------------------------------ editing
+; CRSR: the cursor a step left / right (round), a row up / down
 curleft dec curx
         bpl +
         lda #15
@@ -733,6 +731,7 @@ cell    lda cury
         tay
         rts
 
+; the cursor's step on / off (on: the value it had last, heard)
 toggle  jsr cell
         lda (ep),y
         beq +
@@ -763,11 +762,11 @@ value   sta tmp
         and #$1f                ; singer: degree + 1, 1..16
         clc
         adc tmp
-        beq vset0
+        beq vset0               ; (past either end: as it was)
         cmp #17
         bcs vset0
         sta tmp2
-        lda (ep),y
+        lda (ep),y              ; the kind (bits 5-6) and bit 7 kept
         and #$e0
         ora tmp2
         sta (ep),y
@@ -791,8 +790,8 @@ vbass   and #$1f                ; bass: the next note in the scale
         bcs vset0
         sta tmp2
         jsr inscale
-        beq -
-        lda (ep),y
+        beq -                   ; not in the scale: one more
+        lda (ep),y              ; the length (bits 5-6) and the slide kept
         and #$e0
         ora tmp2
         sta (ep),y
@@ -811,7 +810,7 @@ inscale lda tmp2
         sbc #12
         bcs -
 +       tax                     ; in the scale of the moment (the smode's)
-        cpx #8
+        cpx #8                  ; (smask: bits 0-7, then smask+1 bits 0-3)
         bcs +
         lda smask
         and bit8,x
@@ -819,13 +818,13 @@ inscale lda tmp2
 +       lda smask+1
         and bit8-8,x
         rts
-bit8    .byte 1, 2, 4, 8, 16, 32, 64, 128
+bit8    .byte 1, 2, 4, 8, 16, 32, 64, 128     ; bit n
 
 ; A = +1 / -1: bass length 1-4 or the meow kind 0-3
 modify  sta tmp
         jsr cell
         lda (ep),y
-        beq +
+        beq +                   ; (an empty step, a drum: nothing)
         ldx cury
         beq +
         lda tmp                 ; bits 5-6 +- 1, round
@@ -848,6 +847,7 @@ modify  sta tmp
         jmp vset
 +       rts
 
+; G: the bass step's slide (bit 7) on / off
 slide   ldx cury
         cpx #1
         bne +
@@ -859,7 +859,7 @@ slide   ldx cury
         jmp vset
 +       rts
 
-; A = slot to edit
+; A = slot to edit (F1-F7: bar A-D); setep: ep on slot eslot
 editslot
         sta eslot
         jsr setep
@@ -873,6 +873,7 @@ setep   lda eslot
         sty ep+1
         rts
 
+; DEL: the cursor's row (its cat, 16 steps) cleared
 clearrow
         lda cury
         asl a
@@ -893,7 +894,7 @@ copya   lda #0
         jsr slotptr
         sta gp
         sty gp+1
-        ldy #47
+        ldy #47                 ; all three rows: 48 bytes
 -       lda (gp),y
         sta (ep),y
         dey
@@ -902,10 +903,11 @@ copya   lda #0
 
 ; the chain presets: AAAB, AABB, ABAC, ABCD, A, AB, AAABAAAC
 CHAINS   = [[0,0,0,1], [0,0,1,1], [0,1,0,2], [0,1,2,3], [0], [0,1], [0,0,0,1,0,0,0,2]]
-chainlen .byte 4, 4, 4, 4, 1, 2, 8
-chainoff .byte 0, 4, 8, 12, 16, 17, 19
+chainlen .byte 4, 4, 4, 4, 1, 2, 8               ; per preset: its length,
+chainoff .byte 0, 4, 8, 12, 16, 17, 19          ; where it starts in chaindat,
 chaindat .byte 0,0,0,1, 0,0,1,1, 0,1,0,2, 0,1,2,3, 0, 0,1, 0,0,0,1,0,0,0,2
 
+; C: the next preset into the song's chain (song+4, song+5...)
 nextchain
         ldx chainp
         inx
@@ -977,6 +979,7 @@ abass   jsr trig_bass
         sta audt
 +       rts
 
+; once a frame: an auditioned bass note let go when audt runs out
 audition_tick
         lda audt
         beq +
@@ -992,7 +995,7 @@ harmkey lda sid2
         ldx #<msg_nosid2
         ldy #>msg_nosid2
         jmp message
-+       jsr harm_toggle
++       jsr harm_toggle         ; then the message for harmony 0 / 2 / 4
         ldx #<msg_hoff
         ldy #>msg_hoff
         lda harmony
@@ -1057,7 +1060,7 @@ nextmode
         asl a
         ora cstyle
         sta song
-        jsr loadscale
+        jsr loadscale           ; smask, the bass notes the panel shows
         jsr ui_rescale
         lda #$80
         sta dirty
@@ -1089,6 +1092,7 @@ padrow  .byte $40,$02,$40,$02,$40,$02,$40,$02,$40,$02, $04,$20,$04,$20,$04,$20,$
         .byte $10,$80,$10,$80,$10,$80,$10,$80,$10,$80
 NPADS    = 29
 
+; the live play keys (pmode on): see above
 keys_live
         #pressed K_ARROW
         beq +
@@ -1123,7 +1127,7 @@ keys_live
         jmp ++
 +       lda #$ff
         jsr transpose
-+       ldx #NPADS-1
++       ldx #NPADS-1            ; every pad pressed this frame
 -       ldy padcol,x
         lda knew,y
         and padrow,x
@@ -1190,17 +1194,17 @@ play_rec
         lda rec
         beq pnow
         lda step                ; the step's length in frames
-        lsr a
-        lda tempo
+        lsr a                   ; (C: an odd step, tempo - swing; even:
+        lda tempo               ; tempo + swing)
         bcs +
         clc
         adc swing
-        bne ++
+        bne ++                  ; (always)
 +       sec
         sbc swing
 +       sta tmp                 ; length
         sec
-        sbc stepcnt             ; frames gone
+        sbc stepcnt             ; frames gone (stepcnt: those left)
         asl a
         cmp tmp                 ; past half the step?
         bcs plate
@@ -1242,6 +1246,7 @@ pwrite  sta tmp
         sta dirty
         rts
 
+; padv on cat padc now
 pnow    lda padv
         ldx padc
         stx tmp
@@ -1264,7 +1269,7 @@ rectog  lda rec
         eor #1
         sta rec
         beq +
-        ldx #191
+        ldx #191                ; the 4 slots' 192 step bytes
 -       lda song+21,x
         sta undobuf,x
         dex
@@ -1272,6 +1277,7 @@ rectog  lda rec
         bne -
 +       jmp status
 
+; DEL in live play: the patterns as they were when REC went on
 undo    ldx #191
 -       lda undobuf,x
         sta song+21,x
@@ -1295,9 +1301,10 @@ follow  lda pmode
         sta dirty
 +       rts
 
-undobuf .fill 192
+undobuf .fill 192               ; the patterns at REC on (rectog)
 
 
+; the messages (ui.asm message: X/Y, a 0-terminated text in screen codes)
         .enc "screen"
 msg_loaded .null "Loaded"
 msg_nslot  .text "Next bar: slot "
@@ -1342,7 +1349,7 @@ pcat    lda cathit,x
         lda #6                  ; frames a hit shows
         cpx #2
         bne +
-        ldy echo_k
+        ldy echo_k              ; the singer: as long as the meow (its kind)
         lda mlen,y
 +       sta catt,x
         lda tmp
@@ -1361,8 +1368,8 @@ pidle   lda catt,x
 pnext   dex
         bpl pcat
         rts
-pose    .byte 2, 2, 1
-posex   .byte 3, 3, 0
+pose    .byte 2, 2, 1           ; per cat: the pose of its next hit
+posex   .byte 3, 3, 0           ; ...xor this after each (2 <-> 1)
 
 ; A = semitone from C0: its name (3 characters) at (gp)
 notename
@@ -1388,9 +1395,6 @@ notename
         bpl -
         rts
 
-        .enc "screen"
-kindnames .text "mew meowooh mrr?"
-        .enc "none"
 
 fxvoice
 fxlo

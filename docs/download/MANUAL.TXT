@@ -552,6 +552,14 @@ THE DRUMS PAGE
   TUNE       the whole kit lower or higher, from -8 (half the pitch)
              to +8 (one and a half times); 0 is as made.
 
+On the right is one box:
+
+  [ ] BEAT PULSE  ticked at first: every kick, boom, snare, bap and
+                  clap lights the screen's border for a moment in
+                  that sound's colour on the matrix, then it fades
+                  back. Untick it for a calm border. It is not saved
+                  with the songs.
+
 The drums have no Level. A drum hit is nearly all attack, and the
 softer held note that turns the other cats down does next to nothing
 to it. To hear more of the drums, turn the bass down (Level, on the
@@ -1138,21 +1146,24 @@ APPENDIX D   MESSAGES
 
 Messages appear on the settings line for a few seconds.
 
-  Loaded               the song came off the disk into the open
-                       slot and plays
-  Next bar: slot N     slot N opens at the end of the bar (press the
-                       open slot's key to call it off)
-  New sounds at the    the open song gets the style's sounds at the
-  next bar             end of the bar
-  A new song in this   New, This slot: an empty song in the open slot
-  slot
-  Ten new songs        New, All slots: an empty song in every slot
-  The ten styles'      New, Defaults: the slots hold the ten styles'
-  songs are back       songs again
-  Needs a 2nd SID      harmony needs a second SID chip
-  Harmony: 3rd up /    the harmony singer's interval
-  Harmony: 5th up /
-  Harmony off
+  Loaded                          the song came off the disk into the
+                                  open slot and plays
+  Next bar: slot N                slot N opens at the end of the bar
+                                  (press the open slot's key to call it
+                                  off)
+  New sounds at the next bar      the open song gets the style's sounds
+                                  at the end of the bar
+  A new song in this slot         New, This slot: an empty song in the
+                                  open slot
+  Ten new songs                   New, All slots: an empty song in every
+                                  slot
+  The ten styles' songs are back  New, Defaults: the slots hold the ten
+                                  styles' songs again
+  Needs a 2nd SID                 harmony needs a second SID chip
+  Harmony: 3rd up                 the harmony singer's interval: a third
+                                  up,
+  Harmony: 5th up                 a fifth up,
+  Harmony off                     or no harmony
 
 On the disk page, messages appear on the page's bottom line:
 
