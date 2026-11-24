@@ -24,6 +24,8 @@
 
 .weak
 DEBUG    = 0              ; make DEBUG=1: raster time in the border
+WEB      = 0              ; the web edition (make web): the ten techno songs
+                          ; built in, in the slots at start (slots.asm)
 CHECKPTR = 0              ; -D CHECKPTR=1: jam on a sound script pointer past the program
 .endweak
 frame    = $02

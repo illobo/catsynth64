@@ -747,6 +747,11 @@ into the open slot and plays at once, and it is yours to change and
 save under a name of your own (on a disk of your own, if you like to
 keep the program disk as it is).
 
+In the browser version on the CatSynth 64 website there is no disk
+drive, so the ten slots start with these ten songs instead of the
+styles' songs. New, then Defaults, on the disk page brings the styles'
+songs back.
+
 Load them into the slots and you have a techno set on the number
 keys: press 1, load ACID ALLEYCAT; press 2, load BERLIN BASEMENT; and
 so on. Then play the set live, switching songs on the bar line.

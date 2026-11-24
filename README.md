@@ -35,6 +35,8 @@ All you need is [64tass](https://sourceforge.net/projects/tass64/):
 
     make            # build/catsynth.prg: LOAD and RUN it
     make packed     # build/catsynth64.prg, packed with Exomizer 3, as released
+    make web        # build/catsynth-web.prg: the web edition (the browser has
+                    # no disk drive): the ten techno songs in the song slots
 
 Or without make: `64tass -C -a src/catsynth.asm -o catsynth.prg`.
 
@@ -47,7 +49,8 @@ Or without make: `64tass -C -a src/catsynth.asm -o catsynth.prg`.
                 slots: the ten song slots)
     gen/        tables the program includes, made by the author's tools:
                 the ten styles (kits, basses, scales, songs), the stage and
-                title graphics, and the UI font
+                title graphics, the ten techno songs (for the web
+                edition), and the UI font
     docs/       the website (GitHub Pages): the tutorial, the manual, the
                 browser version and the downloads (the disk, with ten
                 techno songs, and the program)

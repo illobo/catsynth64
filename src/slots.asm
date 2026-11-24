@@ -124,14 +124,58 @@ csnext  lda cs
         inc cs+1
 +       rts
 
-; the ten styles' songs into the ten slots; slot 1 open
+; the ten styles' songs into the ten slots (the web edition: the ten
+; techno songs); slot 1 open
 slots_init
         jsr slots_defaults
+        .if WEB
+        jsr slots_techno
+        .endif
         lda #0
         sta curslot
         tax
         jsr slot_fetch
         jmp slot_play
+
+        .if WEB
+; the web edition (no disk drive there): the ten techno songs, packed as on
+; the disk (build/techno.inc), unpacked into the slots with their names
+slots_techno
+        ldx #0
+-       stx sli
+        lda tslo,x
+        sta cs
+        lda tshi,x
+        sta cs+1
+        #setw cd, disk_buf
+        lda tslen,x
+        jsr mcopy
+        ldx sli
+        lda tslen,x
+        jsr song_unpack
+        bcs +                   ; (never: tools/techno.py checks them)
+        lda sli                 ; the name: tsnames + 17 * slot
+        asl a
+        asl a
+        asl a
+        asl a
+        adc sli
+        tax
+        ldy #0
+-       lda tsnames,x
+        sta sname,y
+        inx
+        iny
+        cpy #SNAMEL
+        bne -
+        ldx sli
+        jsr slot_put
++       ldx sli
+        inx
+        cpx #NSLOTS
+        bne --
+        rts
+        .endif                  ; (the songs: ui.asm helpbuf)
 
 ; every slot back to its style's song (the working copy is overwritten)
 slots_defaults

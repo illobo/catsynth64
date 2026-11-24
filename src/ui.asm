@@ -3421,7 +3421,15 @@ help_close
         sta dirty
         rts
 
-helpbuf .fill 1040
+helpbuf                         ; (the panel under the help or the disk page)
+        .if WEB                 ; the web edition: the techno songs start
+        .include "../gen/techno.inc"  ; here (slots.asm slots_techno
+        .if (* - helpbuf) < 1040        ; unpacks them before the help or
+        .fill 1040 - (* - helpbuf)      ; the disk page can use it)
+        .endif
+        .else
+        .fill 1040
+        .endif
 
 ; 13 rows of 40: a frame, "CatSynth 64 Help" on it; headings bold,
 ; the keys regular
