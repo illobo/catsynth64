@@ -2,158 +2,183 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CatSynth 64: the tutorial</title>
 <meta name="description" content="Meet the band and make your first song with CatSynth 64.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800;900&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=Press+Start+2P&display=swap">
 <style>
-  /* C64 Pro Mono by Style64 (https://style64.org/c64-truetype), embedded
-     unmodified under its licence: fonts/C64_TrueType-license.txt */
-  @font-face { font-family: "C64 Pro Mono"; src: url("fonts/C64_Pro_Mono-STYLE.woff") format("woff");
-    font-display: swap; }
-  :root { --bg: #3e31a2; --panel: #352879; --text: #ffffff; --soft: #bbbbbb; --accent: #eeee77;
-    --link: #aaffee; --cyan: #aaffee; --red: #ff7777; --green: #aaff66; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-    font: 16px/1.75 "C64 Pro Mono", monospace; -webkit-font-smoothing: none; }
-  main { max-width: 820px; margin: 0 auto; padding: 24px 16px 48px; }
-  nav.top { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: center; margin: 0 0 8px; }
-  nav.top a { color: var(--link); text-decoration: none; }
-  nav.top a.on { color: var(--accent); }
-  h1 { font: 32px/1.25 "C64 Pro Mono", monospace; color: var(--accent); margin: 0.4em 0 0.1em; text-align: center; }
-  .by { text-align: center; color: var(--soft); margin: 0 0 1.5em; }
-  h2 { color: var(--accent); font-size: 18px; font-weight: normal; margin: 2.2em 0 0.6em; }
-  h2 small { display: block; color: var(--soft); font-size: 14px; }
-  h3 { color: var(--cyan); font-size: 16px; font-weight: normal; margin: 1.6em 0 0.4em; }
-  b { font-weight: normal; color: var(--accent); }
-  p, li { max-width: 66ch; }
-  a { color: var(--link); }
-  img { width: 100%; height: auto; display: block; image-rendering: pixelated; border: 4px solid #000; border-radius: 6px; }
-  figure { margin: 0 0 20px; }
-  figcaption { color: var(--soft); margin-top: 4px; }
-  .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 560px) { .shots { grid-template-columns: 1fr; } h1 { font-size: 18px; } }
-  .box { background: var(--panel); border-radius: 8px; padding: 12px 20px; }
-  table { border-collapse: collapse; }
-  td { padding: 4px 16px 4px 0; vertical-align: top; }
-  td:first-child { color: var(--accent); white-space: nowrap; }
-  .get { display: inline-block; background: var(--accent); color: #000; padding: 10px 20px; border-radius: 6px;
-    text-decoration: none; margin: 4px 8px 4px 0; }
-  pre { font: 14px/1.5 "C64 Pro Mono", monospace; background: var(--panel); border-radius: 8px; padding: 10px 14px;
-    overflow-x: auto; white-space: pre; }
-  pre.try { border-left: 6px solid var(--accent); }
-  .toc { columns: 2; column-gap: 32px; padding-left: 0; list-style: none; }
-  .toc li { break-inside: avoid; margin: 0 0 6px; }
-  .toc small { color: var(--soft); }
-  @media (max-width: 560px) { .toc { columns: 1; } }
-  .next { margin-top: 2.5em; }
-  footer { color: var(--soft); margin-top: 3em; text-align: center; font-size: 14px; }
-  code { font-family: inherit; color: var(--accent); }
+/* a printed home-computer manual: white pages, a stage-light colour band,
+   chapter openers with a big number, brown keycaps, blue C64 screen boxes */
+:root {
+  --paper: #ffffff; --ink: #1d1b22; --ink-soft: #55525e; --rule: #d9d6df;
+  --c64-bg: #40318d; --c64-fg: #8b7fd8; --c64-border: #7869c4;
+  --key: #4b3a30; --key-top: #6b5547; --key-fg: #f3ece4;
+  --try: #fff6d6; --try-edge: #e0b93c; --note: #eef3ff; --note-edge: #5a74c8;
+  --l1: #e8742a; --l2: #3fae55; --l3: #d0559b; --l4: #3f73d6; --l5: #8b5bc7;
+  --font-head: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Public Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-screen: "Press Start 2P", "Courier New", monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); scroll-padding-top: 16px; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.6 var(--font-body);
+  padding: 0 max(16px, env(safe-area-inset-left, 0px)) 64px; }
+.band { height: 10px; display: grid; grid-template-columns: repeat(5, 1fr);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); }
+.band span:nth-child(1){background:var(--l1)} .band span:nth-child(2){background:var(--l2)}
+.band span:nth-child(3){background:var(--l3)} .band span:nth-child(4){background:var(--l4)}
+.band span:nth-child(5){background:var(--l5)}
+nav.top { max-width: 1060px; margin: 0 auto; padding: 14px 0 0; display: flex; flex-wrap: wrap; gap: 6px 22px;
+  font: 800 12px/1 var(--font-head); letter-spacing: .14em; text-transform: uppercase; }
+nav.top a { color: var(--ink-soft); text-decoration: none; padding: 4px 0; }
+nav.top a:hover, nav.top a.on { color: var(--ink); }
+nav.top a.on { box-shadow: inset 0 -3px 0 var(--l4); }
+header.cover { max-width: 1060px; margin: 0 auto; padding-block: 48px 40px; display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: center; }
+@media (max-width: 820px) { header.cover { grid-template-columns: minmax(0, 1fr); padding-block: 28px 24px; } }
+.cover .kicker { font: 700 13px/1 var(--font-head); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+.cover h1 { font: 900 clamp(44px, 8vw, 84px)/.92 var(--font-head); letter-spacing: -.02em; margin: 12px 0 8px; text-wrap: balance; }
+.cover h1 b { display: block; font-weight: 500; font-size: .42em; letter-spacing: .02em; margin-top: 10px; }
+.cover p { max-width: 46ch; color: var(--ink-soft); margin: 16px 0 0; }
+.buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.button { font: 800 13px/1 var(--font-head); letter-spacing: .12em; text-transform: uppercase; text-decoration: none;
+  color: var(--key-fg); background: linear-gradient(var(--key-top), var(--key)); border-radius: 6px;
+  border-bottom: 4px solid #2c211b; padding: 13px 18px 12px; }
+.button.alt { color: var(--ink); background: #fff; border: 2px solid var(--ink); border-bottom-width: 4px; }
+.button:hover { filter: brightness(1.12); }
+figure.shot { margin: 18px 0; }
+.shot img { width: 100%; height: auto; image-rendering: pixelated; display: block; border: 10px solid #222;
+  border-radius: 6px; background: #000; }
+.shot figcaption { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
+.shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; }
+@media (max-width: 640px) { .shots { grid-template-columns: minmax(0, 1fr); } }
+.wrap { max-width: 1060px; margin: 0 auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; }
+.wrap.single { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 820px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 24px; } nav.toc { position: static !important; } }
+nav.toc { position: sticky; top: 16px; align-self: start; font: 500 14px/1.5 var(--font-head);
+  max-height: calc(100vh - 32px); overflow-y: auto; }
+nav.toc h2 { font: 800 12px/1 var(--font-head); letter-spacing: .14em; text-transform: uppercase; margin: 0 0 12px; color: var(--ink-soft); }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+nav.toc a { color: var(--ink); text-decoration: none; display: grid; grid-template-columns: 2.2em 1fr; padding: 2px 0; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--l4); }
+nav.toc a span { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+nav.toc ol ol { margin: 2px 0 8px 2.2em; font-size: 13px; gap: 0; }
+nav.toc ol ol a { grid-template-columns: 1fr; color: var(--ink-soft); }
+main { min-width: 0; max-width: 72ch; }
+.wrap.single main { max-width: none; }
+section.chapter { padding-top: 32px; border-top: 3px solid var(--ink); margin-top: 48px; }
+section.chapter:first-of-type { margin-top: 0; }
+.chap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; align-items: end; margin-bottom: 20px; }
+.chap .num { font: 900 88px/.8 var(--font-head); color: var(--rule); }
+.chap .num.l1{color:var(--l1)} .chap .num.l2{color:var(--l2)} .chap .num.l3{color:var(--l3)}
+.chap .num.l4{color:var(--l4)} .chap .num.l5{color:var(--l5)}
+.chap .lbl { font: 700 12px/1 var(--font-head); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-soft); }
+.chap h2 { font: 800 30px/1.1 var(--font-head); margin: 6px 0 0; text-transform: uppercase; letter-spacing: .01em; text-wrap: balance; }
+h3 { font: 800 15px/1.2 var(--font-head); letter-spacing: .1em; text-transform: uppercase; margin: 28px 0 8px; }
+p { margin: 0 0 14px; }
+a { color: var(--l4); }
+ul.plain { padding-left: 1.2em; margin: 0 0 14px; }
+ul.plain li { margin: 4px 0; }
+kbd { font: 700 12px/1 var(--font-head); letter-spacing: .04em; color: var(--key-fg); background: linear-gradient(var(--key-top), var(--key));
+  border-radius: 4px; padding: 4px 7px 5px; border-bottom: 3px solid #2c211b; white-space: nowrap; display: inline-block; vertical-align: 1px; }
+.screen { background: var(--c64-bg); color: var(--c64-fg); border: 14px solid var(--c64-border); border-radius: 4px;
+  font: 400 11px/1.9 var(--font-screen); padding: 14px 16px; margin: 12px 0 18px; overflow-x: auto; white-space: pre; }
+pre.listing { font: 400 13px/1.55 ui-monospace, "SF Mono", Menlo, monospace; background: #f6f5f9; border: 1px solid var(--rule);
+  border-radius: 6px; padding: 12px 14px; overflow-x: auto; margin: 12px 0 18px; }
+.box { border-left: 5px solid; padding: 12px 16px; margin: 16px 0 18px; border-radius: 0 4px 4px 0; }
+.box b { font: 800 12px/1 var(--font-head); letter-spacing: .14em; text-transform: uppercase; display: block; margin-bottom: 6px; }
+.box p:last-child { margin-bottom: 0; }
+.try { background: var(--try); border-color: var(--try-edge); }
+.note { background: var(--note); border-color: var(--note-edge); }
+.table-wrap { overflow-x: auto; margin: 12px 0 18px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { font: 800 11px/1.2 var(--font-head); letter-spacing: .12em; text-transform: uppercase; text-align: left; color: var(--ink-soft);
+  border-bottom: 2px solid var(--ink); padding: 8px 10px 6px 0; }
+td { border-bottom: 1px solid var(--rule); padding: 8px 10px 8px 0; vertical-align: top; }
+td:first-child { white-space: nowrap; padding-right: 18px; }
+.end { text-align: center; font: 900 28px/1 var(--font-head); letter-spacing: .2em; margin-top: 56px; }
+footer { max-width: 1060px; margin: 48px auto 0; color: var(--ink-soft); font-size: 13px; border-top: 1px solid var(--rule); padding-top: 14px; }
 </style>
 </head>
 <body>
-<main>
-  <nav class="top"><a href="index.html">Home</a> <a href="tutorial.html" class="on">Tutorial</a> <a href="manual.html">Manual</a> <a href="play/">Play</a> <a href="index.html#get">Download</a></nav>
-
-  <h1>THE TUTORIAL</h1>
-  <p class="by">meet the band, then make your first song</p>
-  <p>This is Chapters 2 and 3 of the <a href="manual.html">manual</a>. You can follow it on a C64, in VICE or
-  <a href="play/">right here in the browser</a>.</p>
-<h2 id="2-meet-the-band"><small>Chapter 2</small>Meet the band</h2>
+<div class="band" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+<nav class="top" aria-label="Site"><a href="index.html">Home</a><a href="tutorial.html" class="on">Tutorial</a><a href="manual.html">Manual</a><a href="play/">Play</a><a href="index.html#get">Download</a></nav>
+<header class="cover">
+  <div>
+    <div class="kicker">Tutorial &middot; v1.0</div>
+    <h1>Your first song<b>Meet the band, then make a song</b></h1>
+    <p>Chapters 2 and 3 of the <a href="manual.html">manual</a>. Follow along on a C64, in VICE or <a href="play/">right here in the browser</a>.</p>
+  </div>
+  <figure class="shot"><img src="img/drums.png" alt="The panel with the drum matrix" width="768" height="544" loading="lazy"><figcaption>The panel: where you make the song.</figcaption></figure>
+</header>
+<div class="wrap"><nav class="toc" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#2-meet-the-band"><span>2</span>Meet the band</a><ol><li><a href="#the-stage">The stage</a></li><li><a href="#the-panel">The panel</a></li></ol></li><li><a href="#3-your-first-song"><span>3</span>Your first song</a><ol><li><a href="#lesson-1-choose-a-style">Lesson 1: choose a style</a></li><li><a href="#lesson-2-move-around">Lesson 2: move around</a></li><li><a href="#lesson-3-add-a-drum">Lesson 3: add a drum</a></li><li><a href="#lesson-4-change-the-bass">Lesson 4: change the bass</a></li><li><a href="#lesson-5-make-the-singer-sing">Lesson 5: make the singer sing</a></li><li><a href="#lesson-6-the-dub-echo">Lesson 6: the dub echo</a></li><li><a href="#lesson-7-faster-slower-stop">Lesson 7: faster, slower, stop</a></li></ol></li></ol></nav><main><section class="chapter" id="2-meet-the-band">
+<div class="chap"><div class="num l2">2</div><div><div class="lbl">Chapter 2</div><h2>Meet the band</h2></div></div>
 <p>The screen has two halves. At the top is the stage with the band; at the bottom is the panel where you change what they play.</p>
 <h3 id="the-stage">The stage</h3>
-<figure><img src="img/title.png" alt="The title screen: the band on stage" width="768" height="544" loading="lazy"></figure>
-<pre>RINGO PURR      the drum cat (left, black) sits behind a kick drum,
-                a snare and a hi-hat. Watch the sticks: Ringo plays
-                the drum you hear.
-PAW MCCATNEY    the bass cat (middle, orange) plays a red bass guitar
-                and plucks it on every note.
-MICK JAGUAR     the singer cat (right, grey) stands at the
-                microphone. Mick&#x27;s mouth opens for every meow, and
-                an ear flicks at every echo.</pre>
+<div class="table-wrap"><table><tr><td>RINGO PURR</td><td>the drum cat (left, black) sits behind a kick drum, a snare and a hi-hat. Watch the sticks: Ringo plays the drum you hear.</td></tr><tr><td><kbd>PAW</kbd> MCCATNEY</td><td>the bass cat (middle, orange) plays a red bass guitar and plucks it on every note.</td></tr><tr><td>MICK JAGUAR</td><td>the singer cat (right, grey) stands at the microphone. Mick's mouth opens for every meow, and an ear flicks at every echo.</td></tr></table></div>
 <p>Their names are written under them on the title screen. Any likeness to a famous drummer, bass player or singer is purely feline.</p>
 <p>Each cat has a stage light. It flashes when the cat plays and fades away again, and on every new bar the lights change colour.</p>
 <h3 id="the-panel">The panel</h3>
-<figure><img src="img/drums.png" alt="The panel: the tabs, the transport, the drum matrix" width="768" height="544" loading="lazy"></figure>
+<figure class="shot"><img src="img/drums.png" alt="The panel: the tabs, the transport and the drum matrix" width="768" height="544" loading="lazy"><figcaption>On stage: the band, and the panel.</figcaption></figure>
 <p>The panel shows one cat at a time. Across its top are three tabs:</p>
-<pre>    Drums | Bass | Meows</pre>
-<p>The open tab is written in bold, in its cat&#x27;s colour. Click a tab to open it, or press the Commodore key (C=) to open the next one. Click the tab that is already open (or press T) and the cat&#x27;s SETTINGS PAGE opens over the matrix; Chapter 6 tells you all about it.</p>
-<p>MUTE. Right-click a tab and that cat stops playing: its name turns light red and the cat stands still on the stage. Right-click it again to bring it back. On the keyboard, CTRL+1, CTRL+2 and CTRL+3 do the same for the drums, the bass and the meows. A muted cat still plays the steps you set while you edit, so you can hear what you change.</p>
+<div class="screen">Drums | Bass | Meows</div>
+<p>The open tab is written in bold, in its cat's colour. Click a tab to open it, or press the Commodore key (<kbd>C=</kbd>) to open the next one. Click the tab that is already open (or press <kbd>T</kbd>) and the cat's SETTINGS PAGE opens over the matrix; Chapter 6 tells you all about it.</p>
+<p>MUTE. Right-click a tab and that cat stops playing: its name turns light red and the cat stands still on the stage. Right-click it again to bring it back. On the keyboard, <kbd>CTRL</kbd>+<kbd>1</kbd>, <kbd>CTRL</kbd>+<kbd>2</kbd> and <kbd>CTRL</kbd>+<kbd>3</kbd> do the same for the drums, the bass and the meows. A muted cat still plays the steps you set while you edit, so you can hear what you change.</p>
 <p>Next to the tabs are the transport buttons and the tempo:</p>
-<pre>&gt;     PLAY / PAUSE. While the band plays it shows a pause sign.
-      Pause stops the band where it is; play goes on from there.
-#     STOP. The band stops and goes back to the top of the song.
-o     RECORD. Live play with recording switched on (Chapter 7).
-      Click it again to switch both off.
-- 94 +  the tempo in beats per minute. Click - or + to change it.</pre>
-<p>Under the tabs is the open cat&#x27;s bar, the MATRIX. It has 16 steps from left to right, one for every sixteenth note of the bar, and 7 rows. A dot is an empty step; the dots on the four beats are a little brighter. What the rows mean depends on the cat:</p>
-<pre>DRUMS    Each row holds two drum sounds, a left one and a right one,
-         named at the start of the row. A left sound shows as a
-         block, a right sound as a ball, each in its own colour.
-BASS     Each row is a note of the song&#x27;s scale, lowest at the
-         bottom, named at the start of the row (E3, F#2...). The
-         root note is orange.
-MEOWS    Each row is a step of the singer&#x27;s scale, with the note it
-         sings at the start of the row.</pre>
+<div class="table-wrap"><table><tr><td><kbd>&gt;</kbd></td><td>PLAY / PAUSE. While the band plays it shows a pause sign. Pause stops the band where it is; play goes on from there.</td></tr><tr><td>#</td><td>STOP. The band stops and goes back to the top of the song.</td></tr><tr><td>o</td><td>RECORD. Live play with recording switched on (Chapter 7). Click it again to switch both off.</td></tr><tr><td><kbd>-</kbd> <kbd>94</kbd></td><td>+  the tempo in beats per minute. Click - or + to change it.</td></tr></table></div>
+<p>Under the tabs is the open cat's bar, the MATRIX. It has 16 steps from left to right, one for every sixteenth note of the bar, and 7 rows. A dot is an empty step; the dots on the four beats are a little brighter. What the rows mean depends on the cat:</p>
+<div class="table-wrap"><table><tr><td>DRUMS</td><td>Each row holds two drum sounds, a left one and a right one, named at the start of the row. A left sound shows as a block, a right sound as a ball, each in its own colour.</td></tr><tr><td>BASS</td><td>Each row is a note of the song's scale, lowest at the bottom, named at the start of the row (E3, F#2...). The root note is orange.</td></tr><tr><td>MEOWS</td><td>Each row is a step of the singer's scale, with the note it sings at the start of the row.</td></tr></table></div>
 <p>When the bar you are looking at plays, a white arrow on the line above the matrix shows the step the band is on: the PLAYHEAD.</p>
-<p>The frame closes under the matrix. At its right end sits a small floppy disk: click it to open the disk page (Chapter 8). Below the frame, the next-to-last line holds the open cat&#x27;s settings. The bottom line shows the song slot and its name, the mode, the four bars and the song&#x27;s chain. Appendix C tells you about every one of them.</p>
-<h2 id="3-your-first-song"><small>Chapter 3</small>Your first song</h2>
-<p>In this chapter you make the dancehall style your own. The band is already playing. If it is not, press SPACE or click the play button.</p>
-<p>Every lesson works with the keyboard, the mouse or the joystick. Use whichever you like; you can mix them as you go. Remember that FIRE is a left click and FIRE held is a right click.</p>
+<p>The frame closes under the matrix. At its right end sits a small floppy disk: click it to open the disk page (Chapter 8). Below the frame, the next-to-last line holds the open cat's settings. The bottom line shows the song slot and its name, the mode, the four bars and the song's chain. Appendix C tells you about every one of them.</p>
+</section>
+<section class="chapter" id="3-your-first-song">
+<div class="chap"><div class="num l3">3</div><div><div class="lbl">Chapter 3</div><h2>Your first song</h2></div></div>
+<p>In this chapter you make the dancehall style your own. The band is already playing. If it is not, press <kbd>SPACE</kbd> or click the play button.</p>
+<p>Every lesson works with the keyboard, the mouse or the joystick. Use whichever you like; you can mix them as you go. Remember that <kbd>FIRE</kbd> is a left click and <kbd>FIRE</kbd> held is a right click.</p>
 <h3 id="lesson-1-choose-a-style">Lesson 1: choose a style</h3>
-<p>CATSYNTH 64 keeps ten songs at once, one on each number key, and at first each one is the song of a style: 1 is dancehall, 2 roots, and so on up to 0, the blues shuffle (Appendix B lists them all). Press 2. The band finishes the bar it is playing (&quot;Next bar: slot 2&quot;), then plays a slow reggae &quot;one drop&quot;: listen how the drum cat leaves the first beat empty. Press 1 to go back to dancehall.</p>
+<p>CatSynth 64 keeps ten songs at once, one on each number key, and at first each one is the song of a style: 1 is dancehall, 2 roots, and so on up to 0, the blues shuffle (Appendix B lists them all). Press <kbd>2</kbd>. The band finishes the bar it is playing ("Next bar: slot 2"), then plays a slow reggae "one drop": listen how the drum cat leaves the first beat empty. Press <kbd>1</kbd> to go back to dancehall.</p>
 <p>With the mouse, click the name at the bottom left of the screen: the left button takes you to the next song. The right button opens the style list (Chapter 4).</p>
-<pre class="try">TRY THIS: press each number key from 1 to 0 in turn and listen.
-The bottom line shows the number and name of each song.</pre>
+<div class="box try"><b>Try this</b><p>press each number key from 1 to 0 in turn and listen. The bottom line shows the number and name of each song.</p></div>
 <h3 id="lesson-2-move-around">Lesson 2: move around</h3>
-<p>Click the Drums tab, or press C= until it opens. A blinking cursor sits in the matrix: a box on an empty step, a flashing mark on a full one.</p>
-<p>Move it with the CRSR keys (hold SHIFT to go left or up), or just by moving the pointer over the matrix with the mouse or the joystick: the cursor follows the pointer.</p>
+<p>Click the Drums tab, or press <kbd>C=</kbd> until it opens. A blinking cursor sits in the matrix: a box on an empty step, a flashing mark on a full one.</p>
+<p>Move it with the <kbd>CRSR</kbd> keys (hold <kbd>SHIFT</kbd> to go left or up), or just by moving the pointer over the matrix with the mouse or the joystick: the cursor follows the pointer.</p>
 <h3 id="lesson-3-add-a-drum">Lesson 3: add a drum</h3>
 <p>Look at the top row of the drum matrix. It says BD BM: the kick drum (BD) on the left button, the boom (BM) on the right. The settings line under the matrix spells it out for the row the cursor is on (LMB and RMB are the left and right mouse buttons):</p>
-<pre>    LMB Kick      RMB Boom</pre>
-<p>Move the cursor onto an empty step of the top row and press RETURN or click the left mouse button (or tap FIRE). A kick drum appears as a block and you hear it at once. Do it again and it goes away.</p>
-<p>Now press SHIFT and RETURN together, or click the right button, on the same step. The kick becomes a boom, drawn as a ball.</p>
+<div class="screen">LMB Kick      RMB Boom</div>
+<p>Move the cursor onto an empty step of the top row and press <kbd>RETURN</kbd> or click the left mouse button (or tap <kbd>FIRE</kbd>). A kick drum appears as a block and you hear it at once. Do it again and it goes away.</p>
+<p>Now press <kbd>SHIFT</kbd> and <kbd>RETURN</kbd> together, or click the right button, on the same step. The kick becomes a boom, drawn as a ball.</p>
 <p>The drum cat has only two paws free for sticks, so he plays one sound on a step. Put a sound on a step that already has one and the new sound takes its place.</p>
-<p>Press Q on a drum step and the next sound of the kit takes its place: step through all fourteen of them with Q, and back with A.</p>
-<pre class="try">TRY THIS: put a snare (SN, the second row) on the last step of the
-bar and listen to the drum cat play it.</pre>
+<p>Press <kbd>Q</kbd> on a drum step and the next sound of the kit takes its place: step through all fourteen of them with Q, and back with A.</p>
+<div class="box try"><b>Try this</b><p>put a snare (SN, the second row) on the last step of the bar and listen to the drum cat play it.</p></div>
 <h3 id="lesson-4-change-the-bass">Lesson 4: change the bass</h3>
-<figure><img src="img/bass.png" alt="The bass matrix" width="768" height="544" loading="lazy"></figure>
+<figure class="shot"><img src="img/bass.png" alt="The bass matrix: notes on rows, a slide" width="768" height="544" loading="lazy"><figcaption>The bass: a row for each note.</figcaption></figure>
 <p>Open the Bass tab. Each row is a note, so you change the bass line by putting notes on the rows you want. You can only choose notes that fit the song, so the bass cat cannot play a wrong note.</p>
-<pre>RETURN or a left click           a note on the cursor&#x27;s row; on a
-                                 note: take it away
-SHIFT+RETURN or a right click    a note that slides up into its
-                                 pitch, as dub basses do (a yellow
-                                 arrow); on a note: make it longer</pre>
+<div class="table-wrap"><table><tr><td><kbd>RETURN</kbd> or a left click</td><td></td><td>a note on the cursor's row; on note: take it away</td><td>a</td></tr><tr><td><kbd>SHIFT+RETURN</kbd> or a right</td><td>click</td><td>a note that slides up into its pitch, as dub basses do (a yellow arrow); on a note: make it longer</td><td></td></tr></table></div>
 <p>A long note shows as a block followed by a bar for as long as it holds, from 1 to 4 steps. K changes the length too, and G makes a note slide or stop sliding. Q and A move the note under the cursor up and down the scale.</p>
-<p>The matrix shows seven notes at a time. To reach higher or lower notes, move the cursor past the top or the bottom row with CRSR, or click the arrows at the right edge of the matrix: the rows scroll.</p>
-<p>On the settings line, &quot;Len&quot; shows how long new notes are. Click it to change it, or play a note of the length you want first: new notes take the length of the last one you touched.</p>
+<p>The matrix shows seven notes at a time. To reach higher or lower notes, move the cursor past the top or the bottom row with <kbd>CRSR</kbd>, or click the arrows at the right edge of the matrix: the rows scroll.</p>
+<p>On the settings line, "Len" shows how long new notes are. Click it to change it, or play a note of the length you want first: new notes take the length of the last one you touched.</p>
 <h3 id="lesson-5-make-the-singer-sing">Lesson 5: make the singer sing</h3>
-<figure><img src="img/meows.png" alt="The meows matrix" width="768" height="544" loading="lazy"></figure>
-<p>Open the Meows tab and put a meow on an empty step with RETURN or a left click. The singer meows. A meow on a higher row sings higher. Q and A move a meow up and down the scale, too.</p>
+<figure class="shot"><img src="img/meows.png" alt="The meows matrix" width="768" height="544" loading="lazy"><figcaption>The meows: a melody of cat marks.</figcaption></figure>
+<p>Open the Meows tab and put a meow on an empty step with <kbd>RETURN</kbd> or a left click. The singer meows. A meow on a higher row sings higher. Q and A move a meow up and down the scale, too.</p>
 <p>There are four kinds of meow, each with its own mark:</p>
-<pre>o   MEW    short and cheerful         (a ball)
-@   MEOW   the classic, up and down   (a heart)
-O   OOH    long and plaintive, with vibrato   (a ring)
-?   MRR?   rising, like a question</pre>
-<p>A right click or SHIFT+RETURN on a meow changes it to the next kind; so does K. The four marks at the right end of the settings line show which kind new meows get: that one is white. Click another to choose it.</p>
+<div class="table-wrap"><table><tr><td>o</td><td>MEW</td><td>short and cheerful</td><td>(a ball)</td></tr><tr><td>@</td><td>MEOW</td><td>the classic, up and down</td><td>(a heart)</td></tr><tr><td><kbd>O</kbd></td><td>OOH</td><td>long and plaintive, with</td><td>vibrato   (a ring)</td></tr><tr><td>?</td><td>MRR?</td><td>rising, like a question</td><td></td></tr></table></div>
+<p>A right click or <kbd>SHIFT+RETURN</kbd> on a meow changes it to the next kind; so does K. The four marks at the right end of the settings line show which kind new meows get: that one is white. Click another to choose it.</p>
 <h3 id="lesson-6-the-dub-echo">Lesson 6: the dub echo</h3>
-<p>Every meow comes back as an echo, a little darker and quieter. Grey marks in the singer&#x27;s matrix show where the echoes land.</p>
-<p>Press E to change how far apart the echoes are, from 2 to 8 steps, or switch them off. With the mouse, click along the &quot;Echo&quot; slider at the left of the singer&#x27;s settings line: off, 2, 3, 4, 6 and 8 steps.</p>
-<pre class="try">TRY THIS: set the echo to 3 and put two meows a bar apart. Now
-you have a real dub song!</pre>
+<p>Every meow comes back as an echo, a little darker and quieter. Grey marks in the singer's matrix show where the echoes land.</p>
+<p>Press <kbd>E</kbd> to change how far apart the echoes are, from 2 to 8 steps, or switch them off. With the mouse, click along the "Echo" slider at the left of the singer's settings line: off, 2, 3, 4, 6 and 8 steps.</p>
+<div class="box try"><b>Try this</b><p>set the echo to 3 and put two meows a bar apart. Now you have a real dub song!</p></div>
 <h3 id="lesson-7-faster-slower-stop">Lesson 7: faster, slower, stop</h3>
-<p>Press + to play faster and - to play slower, or click the - and + next to the tempo. The tempo shows in beats per minute.</p>
-<p>SPACE stops the band and starts it again from the top. The play button is a pause button: it stops the band where it is and goes on from there. The stop button always goes back to the top.</p>
-<pre class="try">TRY THIS: open the Drums tab and click along the &quot;Swing&quot; slider.
-The off-beat steps come later and later, and the beat starts to
-roll.</pre>
-<p>That&#x27;s it, your first song! In the next chapters you will make it longer, change its key and play it live.</p>
-  <p class="next">Next: <a href="manual.html#bars-and-songs">bars and songs</a>, or the whole
-  <a href="manual.html">manual</a>.</p>
-
-  <footer>CatSynth 64 1.0 &middot; (c) 2026 illobo/netmilk &middot; MIT licence<br>
-  Font: <a href="https://style64.org/c64-truetype">C64 Pro Mono by Style64</a>.
-  Browser version: <a href="https://github.com/floooh/chips">floooh's chips</a> C64 emulator.</footer>
-</main>
+<p>Press <kbd>+</kbd> to play faster and - to play slower, or click the - and + next to the tempo. The tempo shows in beats per minute.</p>
+<p><kbd>SPACE</kbd> stops the band and starts it again from the top. The play button is a pause button: it stops the band where it is and goes on from there. The stop button always goes back to the top.</p>
+<div class="box try"><b>Try this</b><p>open the Drums tab and click along the "Swing" slider. The off-beat steps come later and later, and the beat starts to roll.</p></div>
+<p>That's it, your first song! In the next chapters you will make it longer, change its key and play it live.</p>
+</section>
+<p>Next: <a href="manual.html#bars-and-songs">bars and songs</a>, or the whole <a href="manual.html">manual</a>.</p><div class="end">HAVE FUN!</div></main></div>
+<footer>CatSynth 64 1.0 &middot; (c) 2026 illobo/netmilk &middot; MIT licence &middot;
+<a href="https://github.com/illobo/catsynth64">source on GitHub</a>. Screenshots taken on a C64 Ultimate. The browser version runs on
+<a href="https://github.com/floooh/chips">floooh's chips</a> C64 emulator.</footer>
 </body>
 </html>

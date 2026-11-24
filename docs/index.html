@@ -2,124 +2,161 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CatSynth 64</title>
 <meta name="description" content="A groovebox for the Commodore 64 with a band of three cats. By illobo/netmilk.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800;900&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=Press+Start+2P&display=swap">
 <style>
-  /* C64 Pro Mono by Style64 (https://style64.org/c64-truetype), embedded
-     unmodified under its licence: fonts/C64_TrueType-license.txt */
-  @font-face { font-family: "C64 Pro Mono"; src: url("fonts/C64_Pro_Mono-STYLE.woff") format("woff");
-    font-display: swap; }
-  :root { --bg: #3e31a2; --panel: #352879; --text: #ffffff; --soft: #bbbbbb; --accent: #eeee77;
-    --link: #aaffee; --cyan: #aaffee; --red: #ff7777; --green: #aaff66; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-    font: 16px/1.75 "C64 Pro Mono", monospace; -webkit-font-smoothing: none; }
-  main { max-width: 820px; margin: 0 auto; padding: 24px 16px 48px; }
-  nav.top { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: center; margin: 0 0 8px; }
-  nav.top a { color: var(--link); text-decoration: none; }
-  nav.top a.on { color: var(--accent); }
-  h1 { font: 32px/1.25 "C64 Pro Mono", monospace; color: var(--accent); margin: 0.4em 0 0.1em; text-align: center; }
-  .by { text-align: center; color: var(--soft); margin: 0 0 1.5em; }
-  h2 { color: var(--accent); font-size: 18px; font-weight: normal; margin: 2.2em 0 0.6em; }
-  h2 small { display: block; color: var(--soft); font-size: 14px; }
-  h3 { color: var(--cyan); font-size: 16px; font-weight: normal; margin: 1.6em 0 0.4em; }
-  b { font-weight: normal; color: var(--accent); }
-  p, li { max-width: 66ch; }
-  a { color: var(--link); }
-  img { width: 100%; height: auto; display: block; image-rendering: pixelated; border: 4px solid #000; border-radius: 6px; }
-  figure { margin: 0 0 20px; }
-  figcaption { color: var(--soft); margin-top: 4px; }
-  .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 560px) { .shots { grid-template-columns: 1fr; } h1 { font-size: 18px; } }
-  .box { background: var(--panel); border-radius: 8px; padding: 12px 20px; }
-  table { border-collapse: collapse; }
-  td { padding: 4px 16px 4px 0; vertical-align: top; }
-  td:first-child { color: var(--accent); white-space: nowrap; }
-  .get { display: inline-block; background: var(--accent); color: #000; padding: 10px 20px; border-radius: 6px;
-    text-decoration: none; margin: 4px 8px 4px 0; }
-  pre { font: 14px/1.5 "C64 Pro Mono", monospace; background: var(--panel); border-radius: 8px; padding: 10px 14px;
-    overflow-x: auto; white-space: pre; }
-  pre.try { border-left: 6px solid var(--accent); }
-  .toc { columns: 2; column-gap: 32px; padding-left: 0; list-style: none; }
-  .toc li { break-inside: avoid; margin: 0 0 6px; }
-  .toc small { color: var(--soft); }
-  @media (max-width: 560px) { .toc { columns: 1; } }
-  .next { margin-top: 2.5em; }
-  footer { color: var(--soft); margin-top: 3em; text-align: center; font-size: 14px; }
-  code { font-family: inherit; color: var(--accent); }
+/* a printed home-computer manual: white pages, a stage-light colour band,
+   chapter openers with a big number, brown keycaps, blue C64 screen boxes */
+:root {
+  --paper: #ffffff; --ink: #1d1b22; --ink-soft: #55525e; --rule: #d9d6df;
+  --c64-bg: #40318d; --c64-fg: #8b7fd8; --c64-border: #7869c4;
+  --key: #4b3a30; --key-top: #6b5547; --key-fg: #f3ece4;
+  --try: #fff6d6; --try-edge: #e0b93c; --note: #eef3ff; --note-edge: #5a74c8;
+  --l1: #e8742a; --l2: #3fae55; --l3: #d0559b; --l4: #3f73d6; --l5: #8b5bc7;
+  --font-head: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Public Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-screen: "Press Start 2P", "Courier New", monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); scroll-padding-top: 16px; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.6 var(--font-body);
+  padding: 0 max(16px, env(safe-area-inset-left, 0px)) 64px; }
+.band { height: 10px; display: grid; grid-template-columns: repeat(5, 1fr);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); }
+.band span:nth-child(1){background:var(--l1)} .band span:nth-child(2){background:var(--l2)}
+.band span:nth-child(3){background:var(--l3)} .band span:nth-child(4){background:var(--l4)}
+.band span:nth-child(5){background:var(--l5)}
+nav.top { max-width: 1060px; margin: 0 auto; padding: 14px 0 0; display: flex; flex-wrap: wrap; gap: 6px 22px;
+  font: 800 12px/1 var(--font-head); letter-spacing: .14em; text-transform: uppercase; }
+nav.top a { color: var(--ink-soft); text-decoration: none; padding: 4px 0; }
+nav.top a:hover, nav.top a.on { color: var(--ink); }
+nav.top a.on { box-shadow: inset 0 -3px 0 var(--l4); }
+header.cover { max-width: 1060px; margin: 0 auto; padding-block: 48px 40px; display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: center; }
+@media (max-width: 820px) { header.cover { grid-template-columns: minmax(0, 1fr); padding-block: 28px 24px; } }
+.cover .kicker { font: 700 13px/1 var(--font-head); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+.cover h1 { font: 900 clamp(44px, 8vw, 84px)/.92 var(--font-head); letter-spacing: -.02em; margin: 12px 0 8px; text-wrap: balance; }
+.cover h1 b { display: block; font-weight: 500; font-size: .42em; letter-spacing: .02em; margin-top: 10px; }
+.cover p { max-width: 46ch; color: var(--ink-soft); margin: 16px 0 0; }
+.buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.button { font: 800 13px/1 var(--font-head); letter-spacing: .12em; text-transform: uppercase; text-decoration: none;
+  color: var(--key-fg); background: linear-gradient(var(--key-top), var(--key)); border-radius: 6px;
+  border-bottom: 4px solid #2c211b; padding: 13px 18px 12px; }
+.button.alt { color: var(--ink); background: #fff; border: 2px solid var(--ink); border-bottom-width: 4px; }
+.button:hover { filter: brightness(1.12); }
+figure.shot { margin: 18px 0; }
+.shot img { width: 100%; height: auto; image-rendering: pixelated; display: block; border: 10px solid #222;
+  border-radius: 6px; background: #000; }
+.shot figcaption { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
+.shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; }
+@media (max-width: 640px) { .shots { grid-template-columns: minmax(0, 1fr); } }
+.wrap { max-width: 1060px; margin: 0 auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; }
+.wrap.single { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 820px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 24px; } nav.toc { position: static !important; } }
+nav.toc { position: sticky; top: 16px; align-self: start; font: 500 14px/1.5 var(--font-head);
+  max-height: calc(100vh - 32px); overflow-y: auto; }
+nav.toc h2 { font: 800 12px/1 var(--font-head); letter-spacing: .14em; text-transform: uppercase; margin: 0 0 12px; color: var(--ink-soft); }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+nav.toc a { color: var(--ink); text-decoration: none; display: grid; grid-template-columns: 2.2em 1fr; padding: 2px 0; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--l4); }
+nav.toc a span { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+nav.toc ol ol { margin: 2px 0 8px 2.2em; font-size: 13px; gap: 0; }
+nav.toc ol ol a { grid-template-columns: 1fr; color: var(--ink-soft); }
+main { min-width: 0; max-width: 72ch; }
+.wrap.single main { max-width: none; }
+section.chapter { padding-top: 32px; border-top: 3px solid var(--ink); margin-top: 48px; }
+section.chapter:first-of-type { margin-top: 0; }
+.chap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; align-items: end; margin-bottom: 20px; }
+.chap .num { font: 900 88px/.8 var(--font-head); color: var(--rule); }
+.chap .num.l1{color:var(--l1)} .chap .num.l2{color:var(--l2)} .chap .num.l3{color:var(--l3)}
+.chap .num.l4{color:var(--l4)} .chap .num.l5{color:var(--l5)}
+.chap .lbl { font: 700 12px/1 var(--font-head); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-soft); }
+.chap h2 { font: 800 30px/1.1 var(--font-head); margin: 6px 0 0; text-transform: uppercase; letter-spacing: .01em; text-wrap: balance; }
+h3 { font: 800 15px/1.2 var(--font-head); letter-spacing: .1em; text-transform: uppercase; margin: 28px 0 8px; }
+p { margin: 0 0 14px; }
+a { color: var(--l4); }
+ul.plain { padding-left: 1.2em; margin: 0 0 14px; }
+ul.plain li { margin: 4px 0; }
+kbd { font: 700 12px/1 var(--font-head); letter-spacing: .04em; color: var(--key-fg); background: linear-gradient(var(--key-top), var(--key));
+  border-radius: 4px; padding: 4px 7px 5px; border-bottom: 3px solid #2c211b; white-space: nowrap; display: inline-block; vertical-align: 1px; }
+.screen { background: var(--c64-bg); color: var(--c64-fg); border: 14px solid var(--c64-border); border-radius: 4px;
+  font: 400 11px/1.9 var(--font-screen); padding: 14px 16px; margin: 12px 0 18px; overflow-x: auto; white-space: pre; }
+pre.listing { font: 400 13px/1.55 ui-monospace, "SF Mono", Menlo, monospace; background: #f6f5f9; border: 1px solid var(--rule);
+  border-radius: 6px; padding: 12px 14px; overflow-x: auto; margin: 12px 0 18px; }
+.box { border-left: 5px solid; padding: 12px 16px; margin: 16px 0 18px; border-radius: 0 4px 4px 0; }
+.box b { font: 800 12px/1 var(--font-head); letter-spacing: .14em; text-transform: uppercase; display: block; margin-bottom: 6px; }
+.box p:last-child { margin-bottom: 0; }
+.try { background: var(--try); border-color: var(--try-edge); }
+.note { background: var(--note); border-color: var(--note-edge); }
+.table-wrap { overflow-x: auto; margin: 12px 0 18px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { font: 800 11px/1.2 var(--font-head); letter-spacing: .12em; text-transform: uppercase; text-align: left; color: var(--ink-soft);
+  border-bottom: 2px solid var(--ink); padding: 8px 10px 6px 0; }
+td { border-bottom: 1px solid var(--rule); padding: 8px 10px 8px 0; vertical-align: top; }
+td:first-child { white-space: nowrap; padding-right: 18px; }
+.end { text-align: center; font: 900 28px/1 var(--font-head); letter-spacing: .2em; margin-top: 56px; }
+footer { max-width: 1060px; margin: 48px auto 0; color: var(--ink-soft); font-size: 13px; border-top: 1px solid var(--rule); padding-top: 14px; }
 </style>
 </head>
 <body>
-<main>
-  <nav class="top"><a href="index.html" class="on">Home</a> <a href="tutorial.html">Tutorial</a> <a href="manual.html">Manual</a> <a href="play/">Play</a> <a href="index.html#get">Download</a></nav>
-
-  <h1>CATSYNTH 64</h1>
-  <p class="by">a groovebox for the Commodore 64 with a band of three cats<br>version 1.0 &middot; illobo/netmilk 2026</p>
-  <figure><img src="img/title.png" alt="The title screen: three cats on a stage, CATSYNTH 64 in big letters, v1.0" width="768" height="544" loading="lazy"></figure>
-
-  <h2>What is it?</h2>
-  <p>Three cats play in a band on your C64. <b>Ringo Purr</b> plays the drums. <b>Paw McCatney</b> plays the bass.
-  <b>Mick Jaguar</b> sings, and since he is a cat, he sings in meows.</p>
-  <p>Choose one of ten styles and the band starts playing: dancehall, roots, steppers, ska, bossa, disco, funk,
-  acid, a blues shuffle, and <b>Neko Trap</b>, a weird half-time trap with robot meows.</p>
-  <p>Then make the song yours. Click a step to add a drum, a bass note or a meow. Every meow lands on a note of the
-  song's scale, so the singer is never out of tune. Chain bars into a song, play the pads live, record into the
-  loop, and save your songs to disk.</p>
-  <p>The disk also has <b>ten techno songs</b> by the band, from acid squelch to dub techno, to load from the disk
-  page and make your own.</p>
-  <p>You do not need to know anything about music. If you do, you will find modes, scales, transposes, swing,
-  dub echoes and a looper.</p>
-
-  <h2>Pictures</h2>
-  <div class="shots">
-    <figure><img src="img/drums.png" alt="The drum matrix playing neko trap" width="768" height="544" loading="lazy"><figcaption>The drums</figcaption></figure>
-    <figure><img src="img/bass.png" alt="The bass matrix: notes on rows, a slide" width="768" height="544" loading="lazy"><figcaption>The bass</figcaption></figure>
-    <figure><img src="img/meows.png" alt="The meows: a melody of cat marks" width="768" height="544" loading="lazy"><figcaption>The meows</figcaption></figure>
-    <figure><img src="img/meowpage.png" alt="The Meows page: Bend, Vowel and Tone for each meow, and Cat Size" width="768" height="544" loading="lazy"><figcaption>Meow tweaks</figcaption></figure>
-    <figure><img src="img/basspage.png" alt="The Bass page: Level, Delay, Wave, Meowize and Res boost" width="768" height="544" loading="lazy"><figcaption>Bass tweaks</figcaption></figure>
-    <figure><img src="img/disk.png" alt="The disk page: a floppy, the directory, the name and the buttons" width="768" height="544" loading="lazy"><figcaption>The disk page</figcaption></figure>
-    <figure><img src="img/styles.png" alt="The style list: ten styles in two columns" width="768" height="544" loading="lazy"><figcaption>Any song, any style's sounds</figcaption></figure>
+<div class="band" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+<nav class="top" aria-label="Site"><a href="index.html" class="on">Home</a><a href="tutorial.html">Tutorial</a><a href="manual.html">Manual</a><a href="play/">Play</a><a href="index.html#get">Download</a></nav>
+<header class="cover">
+  <div>
+    <div class="kicker">Commodore 64 &middot; v1.0 &middot; 2026</div>
+    <h1>CatSynth 64<b>A groovebox with a band of three cats</b></h1>
+    <p>Ringo Purr on drums, Paw McCatney on bass and Mick Jaguar, who sings in meows. For the Commodore 64 (PAL), the C64 Ultimate and the Ultimate 64, by illobo/netmilk.</p>
+    <div class="buttons"><a class="button" href="play/">Play in the browser</a>
+    <a class="button alt" href="download/catsynth64-1.0.d64">Download the disk</a></div>
   </div>
-  <figure><img src="img/help.png" alt="The help card with the keys" width="768" height="544" loading="lazy"><figcaption>The help card (RUN/STOP)</figcaption></figure>
-
-  <h2>What it can do</h2>
-  <div class="box"><table>
-    <tr><td>3 cats</td><td>drums (14 sounds, two per row: the left and right mouse buttons), bass and meows</td></tr>
-    <tr><td>10 styles</td><td>each with its own kit, bass sound, scale, tempo and a song of four bars</td></tr>
-    <tr><td>10 slots</td><td>ten songs in memory on the keys 1-0, switched on the bar line; SHIFT+1-0 plays a song
-      with another style's sounds</td></tr>
-    <tr><td>Mouse</td><td>a 1351 mouse in port 1 (or a USB mouse on the C64 Ultimate); a joystick moves the pointer too</td></tr>
-    <tr><td>Songs</td><td>four bars A to D, a chain of up to 16 bars</td></tr>
-    <tr><td>Settings</td><td>Bend, Vowel and Tone for each meow, Cat Size, a sidechain, the kit's tune, bass wave, Meowize, an acid squelch and a dub filter on the bass delay</td></tr>
-    <tr><td>Live</td><td>play the keyboard as pads and record into the loop</td></tr>
-    <tr><td>Second SID</td><td>dub echoes, a harmony singer and a bass delay</td></tr>
-    <tr><td>Disk</td><td>a directory, names, load, save and delete</td></tr>
-    <tr><td>10 songs</td><td>ten techno songs on the disk to load and remix: Acid Alleycat, Berlin Basement,
-      Detroit Whiskers, Dub Techno Nap, Hard Purr, Laser Pointer, Minimal Mouser, Rave of 9 Lives, Techno Tabby,
-      Warehouse Kitty</td></tr>
-  </table></div>
-
-  <h2>Start here</h2>
-  <p><a class="get" href="tutorial.html">The tutorial</a> <a class="get" href="manual.html">The manual</a></p>
-  <p>The tutorial makes your first song in ten minutes. The manual tells you everything else.</p>
-
-  <h2>Play it here</h2>
-  <p><a class="get" href="play/">Play in the browser</a></p>
-  <p>Best with a keyboard and a mouse. Click the screen and move the mouse: the cat paw pointer follows it.
-  SPACE plays and stops, 1 to 0 choose a style.</p>
-
-  <h2 id="get">Get it</h2>
+  <figure class="shot"><img src="img/title.png" alt="The title screen: three cats on a stage, CATSYNTH 64 in big letters, v1.0" width="768" height="544" loading="lazy"><figcaption>The title screen, photographed off a C64 Ultimate.</figcaption></figure>
+</header>
+<div class="wrap single"><main>
+<section class="chapter" id="what">
+  <div class="chap"><div class="num l1">&#9834;</div><div><div class="lbl">Meet the band</div><h2>What is it?</h2></div></div>
+  <p>Three cats play in a band on your Commodore 64. Choose one of ten styles and they start playing. Then make the
+  song yours: click a step to add a drum, a bass note or a meow. Every meow lands on a note of the song's scale, so
+  the singer is never out of tune. Chain bars into a song, play the pads live, record into the loop and save your
+  songs to disk.</p>
+  <p>You do not need to know anything about music. If you do, you will find modes, scales, transposes, swing, dub
+  echoes and a looper waiting for you.</p>
+  <div class="shots"><figure class="shot"><img src="img/drums.png" alt="The drum matrix playing neko trap" width="768" height="544" loading="lazy"><figcaption>The drums: two sounds a row, left and right button.</figcaption></figure><figure class="shot"><img src="img/bass.png" alt="The bass matrix: notes on rows, a slide" width="768" height="544" loading="lazy"><figcaption>The bass: notes, lengths and slides.</figcaption></figure><figure class="shot"><img src="img/meows.png" alt="The meows: a melody of cat marks" width="768" height="544" loading="lazy"><figcaption>The meows: always in key.</figcaption></figure><figure class="shot"><img src="img/meowpage.png" alt="The Meows page" width="768" height="544" loading="lazy"><figcaption>Bend, Vowel, Tone and Cat Size.</figcaption></figure><figure class="shot"><img src="img/basspage.png" alt="The Bass page" width="768" height="544" loading="lazy"><figcaption>Level, a dub delay, Meowize and an acid squelch.</figcaption></figure><figure class="shot"><img src="img/styles.png" alt="The style list" width="768" height="544" loading="lazy"><figcaption>Any song with any style's sounds.</figcaption></figure><figure class="shot"><img src="img/disk.png" alt="The disk page" width="768" height="544" loading="lazy"><figcaption>Your songs on disk, by name.</figcaption></figure><figure class="shot"><img src="img/help.png" alt="The help card" width="768" height="544" loading="lazy"><figcaption>Every key on one card (RUN/STOP).</figcaption></figure></div>
+</section>
+<section class="chapter" id="features">
+  <div class="chap"><div class="num l2">10</div><div><div class="lbl">At a glance</div><h2>What it can do</h2></div></div>
+  <div class="table-wrap"><table><tr><td><b>3 cats</b></td><td>drums (14 sounds, two a row: the left and right mouse buttons), bass and meows</td></tr><tr><td><b>10 styles</b></td><td>dancehall, roots, steppers, ska, bossa, disco, funk, Neko Trap, acid and a blues shuffle, each with its own kit, bass, scale and a four-bar song</td></tr><tr><td><b>10 slots</b></td><td>ten songs in memory on the keys 1 to 0, switched on the bar line; <kbd>SHIFT</kbd>+<kbd>1-0</kbd> plays a song with another style's sounds</td></tr><tr><td><b>Mouse</b></td><td>a 1351 mouse in port 1 (a USB mouse on the C64 Ultimate); a joystick in port 2 moves the pointer too</td></tr><tr><td><b>Songs</b></td><td>four bars A to D and a chain of up to 16 bars</td></tr><tr><td><b>Settings</b></td><td>Bend, Vowel and Tone for each meow, Cat Size, a sidechain, the kit's tune, the bass's level and wave, Meowize, an acid squelch and a dub filter</td></tr><tr><td><b>Live</b></td><td>the keyboard as pads, and a looper</td></tr><tr><td><b>Second SID</b></td><td>dub echoes, a harmony singer and a bass delay</td></tr><tr><td><b>Disk</b></td><td>a directory, names, load, save, delete, and ten techno songs to start from</td></tr></table></div>
+</section>
+<section class="chapter" id="start">
+  <div class="chap"><div class="num l3">3</div><div><div class="lbl">Start here</div><h2>Your first song</h2></div></div>
+  <p>The tutorial makes your first song in ten minutes; the manual tells you everything else.</p>
+  <div class="buttons"><a class="button" href="tutorial.html">The tutorial</a>
+  <a class="button alt" href="manual.html">The manual</a></div>
+  <div class="box try"><b>Play it here</b><p>The <a href="play/">browser version</a> runs CatSynth 64 in an
+  emulator. Best with a keyboard and a mouse: click the screen and move the mouse, and the cat paw pointer follows.
+  <kbd>SPACE</kbd> plays and stops, <kbd>1</kbd> to <kbd>0</kbd> choose a song.</p></div>
+</section>
+<section class="chapter" id="get">
+  <div class="chap"><div class="num l4">&darr;</div><div><div class="lbl">Download</div><h2>Get it</h2></div></div>
   <p>It runs on a real Commodore 64 (PAL), on a C64 Ultimate or an Ultimate 64, and in the VICE emulator.</p>
-  <p><a class="get" href="download/catsynth64-1.0.d64">Download the disk (.d64)</a></p>
-  <p>Or the program file: <a href="download/catsynth64-1.0.prg">catsynth64.prg</a>, or everything with the manual:
-  <a href="download/catsynth64-1.0.zip">catsynth64-1.0.zip</a>.<br>
-  On a disk, type <code>LOAD"CATSYNTH64",8,1</code> and then <code>RUN</code>.</p>
-  <p>The code: <a href="https://github.com/illobo/catsynth64">github.com/illobo/catsynth64</a></p>
-
-  <footer>CatSynth 64 1.0 &middot; (c) 2026 illobo/netmilk &middot; MIT licence<br>
-  Font: <a href="https://style64.org/c64-truetype">C64 Pro Mono by Style64</a>.
-  Browser version: <a href="https://github.com/floooh/chips">floooh's chips</a> C64 emulator.</footer>
-</main>
+  <div class="table-wrap"><table>
+    <tr><td><a href="download/catsynth64-1.0.d64">catsynth64-1.0.d64</a></td><td>the disk: the program and ten techno songs</td></tr>
+    <tr><td><a href="download/catsynth64-1.0.prg">catsynth64-1.0.prg</a></td><td>the program file alone</td></tr>
+    <tr><td><a href="download/catsynth64-1.0.zip">catsynth64-1.0.zip</a></td><td>both, with the manual and the readme as text</td></tr>
+  </table></div>
+  <p>On the disk, type:</p>
+  <div class="screen">LOAD"CATSYNTH64",8,1
+RUN</div>
+  <p>The source code (6502 assembler, 64tass) is on <a href="https://github.com/illobo/catsynth64">GitHub</a>.</p>
+  <div class="end">HAVE FUN!</div>
+</section>
+</main></div>
+<footer>CatSynth 64 1.0 &middot; (c) 2026 illobo/netmilk &middot; MIT licence &middot;
+<a href="https://github.com/illobo/catsynth64">source on GitHub</a>. Screenshots taken on a C64 Ultimate. The browser version runs on
+<a href="https://github.com/floooh/chips">floooh's chips</a> C64 emulator.</footer>
 </body>
 </html>

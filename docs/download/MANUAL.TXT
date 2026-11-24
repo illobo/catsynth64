@@ -574,22 +574,22 @@ THE BASS PAGE
 
 On the right are three boxes:
 
-  [ ] DUB FILTER   (next to Delay) every repeat of the bass delay goes
-           through the second SID's filter with its resonance all the
-           way up. The filter opens bright and closes down to the
-           bass's own notes over the repeat: a ringing dub "wow" on
-           the echo. That filter also shapes the singer's echoes and
-           the harmony, so they ring a little more too, and while one
-           of them sings its vowel steers the filter and the repeat
-           is filtered with it.
-  [ ] MEOWIZE   the bass goes through the singer's filter too, so the
-           meow vowels give the bass a wah.
-  [ ] RES BOOST turns the filter's resonance all the way up, and
-           with Meowize on every bass note opens the filter and lets
-           it close again: an acid squelch on each note. The filter is
-           shared, so while a meow sings it steers the filter, and the
-           meows ring too (a little less on an old 6581 chip, which
-           squeals sooner).
+  [ ] DUB FILTER  (next to Delay) every repeat of the bass delay goes
+                  through the second SID's filter with its resonance all
+                  the way up. The filter opens bright and closes down to
+                  the bass's own notes over the repeat: a ringing dub
+                  "wow" on the echo. That filter also shapes the
+                  singer's echoes and the harmony, so they ring a little
+                  more too, and while one of them sings its vowel steers
+                  the filter and the repeat is filtered with it.
+  [ ] MEOWIZE     the bass goes through the singer's filter too, so the
+                  meow vowels give the bass a wah.
+  [ ] RES BOOST   turns the filter's resonance all the way up, and with
+                  Meowize on every bass note opens the filter and lets
+                  it close again: an acid squelch on each note. The
+                  filter is shared, so while a meow sings it steers the
+                  filter, and the meows ring too (a little less on an
+                  old 6581 chip, which squeals sooner).
 
     TRY THIS: in the acid song (press 9) tick Meowize and Res
     boost, and let the bass squelch between the meows.
