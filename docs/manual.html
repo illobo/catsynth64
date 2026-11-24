@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CatSynth 64: the manual</title>
+<meta name="description" content="The CatSynth 64 user&#x27;s guide.">
+<style>
+  /* C64 Pro Mono by Style64 (https://style64.org/c64-truetype), embedded
+     unmodified under its licence: fonts/C64_TrueType-license.txt */
+  @font-face { font-family: "C64 Pro Mono"; src: url("fonts/C64_Pro_Mono-STYLE.woff") format("woff");
+    font-display: swap; }
+  :root { --bg: #3e31a2; --panel: #352879; --text: #ffffff; --soft: #bbbbbb; --accent: #eeee77;
+    --link: #aaffee; --cyan: #aaffee; --red: #ff7777; --green: #aaff66; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.75 "C64 Pro Mono", monospace; -webkit-font-smoothing: none; }
+  main { max-width: 820px; margin: 0 auto; padding: 24px 16px 48px; }
+  nav.top { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: center; margin: 0 0 8px; }
+  nav.top a { color: var(--link); text-decoration: none; }
+  nav.top a.on { color: var(--accent); }
+  h1 { font: 32px/1.25 "C64 Pro Mono", monospace; color: var(--accent); margin: 0.4em 0 0.1em; text-align: center; }
+  .by { text-align: center; color: var(--soft); margin: 0 0 1.5em; }
+  h2 { color: var(--accent); font-size: 18px; font-weight: normal; margin: 2.2em 0 0.6em; }
+  h2 small { display: block; color: var(--soft); font-size: 14px; }
+  h3 { color: var(--cyan); font-size: 16px; font-weight: normal; margin: 1.6em 0 0.4em; }
+  b { font-weight: normal; color: var(--accent); }
+  p, li { max-width: 66ch; }
+  a { color: var(--link); }
+  img { width: 100%; height: auto; display: block; image-rendering: pixelated; border: 4px solid #000; border-radius: 6px; }
+  figure { margin: 0 0 20px; }
+  figcaption { color: var(--soft); margin-top: 4px; }
+  .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 560px) { .shots { grid-template-columns: 1fr; } h1 { font-size: 18px; } }
+  .box { background: var(--panel); border-radius: 8px; padding: 12px 20px; }
+  table { border-collapse: collapse; }
+  td { padding: 4px 16px 4px 0; vertical-align: top; }
+  td:first-child { color: var(--accent); white-space: nowrap; }
+  .get { display: inline-block; background: var(--accent); color: #000; padding: 10px 20px; border-radius: 6px;
+    text-decoration: none; margin: 4px 8px 4px 0; }
+  pre { font: 14px/1.5 "C64 Pro Mono", monospace; background: var(--panel); border-radius: 8px; padding: 10px 14px;
+    overflow-x: auto; white-space: pre; }
+  pre.try { border-left: 6px solid var(--accent); }
+  .toc { columns: 2; column-gap: 32px; padding-left: 0; list-style: none; }
+  .toc li { break-inside: avoid; margin: 0 0 6px; }
+  .toc small { color: var(--soft); }
+  @media (max-width: 560px) { .toc { columns: 1; } }
+  .next { margin-top: 2.5em; }
+  footer { color: var(--soft); margin-top: 3em; text-align: center; font-size: 14px; }
+  code { font-family: inherit; color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <nav class="top"><a href="index.html">Home</a> <a href="tutorial.html">Tutorial</a> <a href="manual.html" class="on">Manual</a> <a href="play/">Play</a> <a href="index.html#get">Download</a></nav>
+
+  <h1>THE MANUAL</h1>
+  <p class="by">CatSynth 64 user's guide, version 1.0</p>
+  <ul class="toc"><li><a href="#introduction">Introduction</a></li>
+<li><a href="#1-setting-up"><small>Chapter 1</small> Setting up</a></li>
+<li><a href="#2-meet-the-band"><small>Chapter 2</small> Meet the band</a></li>
+<li><a href="#3-your-first-song"><small>Chapter 3</small> Your first song</a></li>
+<li><a href="#4-bars-and-songs"><small>Chapter 4</small> Bars and songs</a></li>
+<li><a href="#5-keys-modes-and-scales"><small>Chapter 5</small> Keys, modes and scales</a></li>
+<li><a href="#6-the-settings-pages"><small>Chapter 6</small> The settings pages</a></li>
+<li><a href="#7-live-play-and-the-looper"><small>Chapter 7</small> Live play and the looper</a></li>
+<li><a href="#8-the-disk-page-saving-your-songs"><small>Chapter 8</small> The disk page: saving your songs</a></li>
+<li><a href="#a-key-chart"><small>Appendix A</small> Key chart</a></li>
+<li><a href="#b-the-ten-styles"><small>Appendix B</small> The ten styles</a></li>
+<li><a href="#c-what-the-screen-tells-you"><small>Appendix C</small> What the screen tells you</a></li>
+<li><a href="#d-messages"><small>Appendix D</small> Messages</a></li>
+<li><a href="#e-for-the-technically-minded"><small>Appendix E</small> For the technically minded</a></li></ul>
+<h2 id="introduction">Introduction</h2>
+<p>Congratulations! You now own CATSYNTH 64, a toy synthesizer for your Commodore 64 with a band of three cats.</p>
+<p>The drum cat keeps the beat. The bass cat plays the bass line. The singer cat sings, and since she is a cat, she sings in meows. Every meow lands on a note of the song&#x27;s scale, so the singer is never out of tune, and every meow can come back as a dub echo.</p>
+<p>You do not need to know anything about music to play CATSYNTH 64. You choose a style, the band starts playing, and you change it a step at a time until it is yours. If you do know about music, you will find scales, modes, transposes, swing and a looper waiting for you.</p>
+<p>You can play with the keyboard, a joystick or a mouse, or all three at once. This guide shows you how. Read Chapter 3 first if you are in a hurry: it makes your first song in ten minutes.</p>
+<h2 id="1-setting-up"><small>Chapter 1</small>Setting up</h2>
+<h3 id="what-you-need">What you need</h3>
+<pre>* A Commodore 64 (PAL), a C64 Ultimate or an Ultimate 64
+* A disk drive as device 8 with the CATSYNTH 64 disk
+* A TV or monitor with sound turned up
+* A mouse in port 1 (you can play without one): a 1351, or on the
+  C64 Ultimate a USB mouse, which the Ultimate turns into a 1351
+* A joystick in port 2 (you can play without one, too)
+* A blank disk if you want to save songs</pre>
+<h3 id="loading-the-program">Loading the program</h3>
+<p>Switch on the computer and the drive, put the disk in the drive and type:</p>
+<pre>    LOAD&quot;CATSYNTH64&quot;,8,1</pre>
+<p>and press RETURN. The screen shows:</p>
+<pre>    SEARCHING FOR CATSYNTH64
+    LOADING
+    READY.</pre>
+<p>Now type RUN and press RETURN. The border flashes for a moment while the program unpacks itself, then the title screen appears and the band starts to play.</p>
+<h3 id="the-title-screen">The title screen</h3>
+<p>The band plays on stage under the CATSYNTH 64 sign while a message scrolls along the bottom of the screen. Every so often the bottom half shows a card with the most important keys. If you leave the title screen alone, the band plays all ten styles in turn, so you can listen to them all.</p>
+<p>Press FIRE, SPACE or RETURN to go on stage. On stage the band plays song slot 1, the dancehall song (Chapter 4 tells you about the ten song slots).</p>
+<h3 id="the-mouse">The mouse</h3>
+<p>The mouse pointer sleeps until you need it. Click a button or give the mouse a quick push and the pointer appears on the panel. The first click only wakes the pointer; from then on every click counts. The pointer stays on the panel and never goes over the stage.</p>
+<p>While you hold a mouse button down, the keyboard is not read. Let go of the button before you press a key.</p>
+<h3 id="the-joystick">The joystick</h3>
+<p>The joystick in port 2 works exactly like the mouse: it moves the same pointer. Push it and the pointer moves, slowly at first and faster the longer you hold it. FIRE is the left mouse button: the click happens when you let go. Hold FIRE for half a second and it is the right button. Everything this guide says about clicks works with the joystick, too. While you hold the joystick, the keyboard is not read.</p>
+<p>NOTE: If your Commodore 64 has a second SID chip, or your C64 Ultimate has its second UltiSID set to address $D420, CATSYNTH 64 finds it by itself. The echoes, the harmony meow and the bass delay then play on the second chip, and the singer&#x27;s harmony setting shows &quot;Off&quot; instead of &quot;--&quot;. Everything else works the same with one SID.</p>
+<h2 id="2-meet-the-band"><small>Chapter 2</small>Meet the band</h2>
+<p>The screen has two halves. At the top is the stage with the band; at the bottom is the panel where you change what they play.</p>
+<h3 id="the-stage">The stage</h3>
+<pre>RINGO PURR      the drum cat (left, black) sits behind a kick drum,
+                a snare and a hi-hat. Watch the sticks: Ringo plays
+                the drum you hear.
+PAW MCCATNEY    the bass cat (middle, orange) plays a red bass guitar
+                and plucks it on every note.
+MICK JAGUAR     the singer cat (right, grey) stands at the
+                microphone. Mick&#x27;s mouth opens for every meow, and
+                an ear flicks at every echo.</pre>
+<p>Their names are written under them on the title screen. Any likeness to a famous drummer, bass player or singer is purely feline.</p>
+<p>Each cat has a stage light. It flashes when the cat plays and fades away again, and on every new bar the lights change colour.</p>
+<h3 id="the-panel">The panel</h3>
+<p>The panel shows one cat at a time. Across its top are three tabs:</p>
+<pre>    Drums | Bass | Meows</pre>
+<p>The open tab is written in bold, in its cat&#x27;s colour. Click a tab to open it, or press the Commodore key (C=) to open the next one. Click the tab that is already open (or press T) and the cat&#x27;s SETTINGS PAGE opens over the matrix; Chapter 6 tells you all about it.</p>
+<p>MUTE. Right-click a tab and that cat stops playing: its name turns light red and the cat stands still on the stage. Right-click it again to bring it back. On the keyboard, CTRL+1, CTRL+2 and CTRL+3 do the same for the drums, the bass and the meows. A muted cat still plays the steps you set while you edit, so you can hear what you change.</p>
+<p>Next to the tabs are the transport buttons and the tempo:</p>
+<pre>&gt;     PLAY / PAUSE. While the band plays it shows a pause sign.
+      Pause stops the band where it is; play goes on from there.
+#     STOP. The band stops and goes back to the top of the song.
+o     RECORD. Live play with recording switched on (Chapter 7).
+      Click it again to switch both off.
+- 94 +  the tempo in beats per minute. Click - or + to change it.</pre>
+<p>Under the tabs is the open cat&#x27;s bar, the MATRIX. It has 16 steps from left to right, one for every sixteenth note of the bar, and 7 rows. A dot is an empty step; the dots on the four beats are a little brighter. What the rows mean depends on the cat:</p>
+<pre>DRUMS    Each row holds two drum sounds, a left one and a right one,
+         named at the start of the row. A left sound shows as a
+         block, a right sound as a ball, each in its own colour.
+BASS     Each row is a note of the song&#x27;s scale, lowest at the
+         bottom, named at the start of the row (E3, F#2...). The
+         root note is orange.
+MEOWS    Each row is a step of the singer&#x27;s scale, with the note it
+         sings at the start of the row.</pre>
+<p>When the bar you are looking at plays, a white arrow on the line above the matrix shows the step the band is on: the PLAYHEAD.</p>
+<p>The frame closes under the matrix. At its right end sits a small floppy disk: click it to open the disk page (Chapter 8). Below the frame, the next-to-last line holds the open cat&#x27;s settings. The bottom line shows the song slot and its name, the mode, the four bars and the song&#x27;s chain. Appendix C tells you about every one of them.</p>
+<h2 id="3-your-first-song"><small>Chapter 3</small>Your first song</h2>
+<p>In this chapter you make the dancehall style your own. The band is already playing. If it is not, press SPACE or click the play button.</p>
+<p>Every lesson works with the keyboard, the mouse or the joystick. Use whichever you like; you can mix them as you go. Remember that FIRE is a left click and FIRE held is a right click.</p>
+<h3 id="lesson-1-choose-a-style">Lesson 1: choose a style</h3>
+<p>CATSYNTH 64 keeps ten songs at once, one on each number key, and at first each one is the song of a style: 1 is dancehall, 2 roots, and so on up to 0, the blues shuffle (Appendix B lists them all). Press 2. The band finishes the bar it is playing (&quot;Next bar: slot 2&quot;), then plays a slow reggae &quot;one drop&quot;: listen how the drum cat leaves the first beat empty. Press 1 to go back to dancehall.</p>
+<p>With the mouse, click the name at the bottom left of the screen: the left button takes you to the next song. The right button opens the style list (Chapter 4).</p>
+<pre class="try">TRY THIS: press each number key from 1 to 0 in turn and listen.
+The bottom line shows the number and name of each song.</pre>
+<h3 id="lesson-2-move-around">Lesson 2: move around</h3>
+<p>Click the Drums tab, or press C= until it opens. A blinking cursor sits in the matrix: a box on an empty step, a flashing mark on a full one.</p>
+<p>Move it with the CRSR keys (hold SHIFT to go left or up), or just by moving the pointer over the matrix with the mouse or the joystick: the cursor follows the pointer.</p>
+<h3 id="lesson-3-add-a-drum">Lesson 3: add a drum</h3>
+<p>Look at the top row of the drum matrix. It says BD BM: the kick drum (BD) on the left button, the boom (BM) on the right. The settings line under the matrix spells it out for the row the cursor is on (LMB and RMB are the left and right mouse buttons):</p>
+<pre>    LMB Kick      RMB Boom</pre>
+<p>Move the cursor onto an empty step of the top row and press RETURN or click the left mouse button (or tap FIRE). A kick drum appears as a block and you hear it at once. Do it again and it goes away.</p>
+<p>Now press SHIFT and RETURN together, or click the right button, on the same step. The kick becomes a boom, drawn as a ball.</p>
+<p>The drum cat has only two paws free for sticks, so he plays one sound on a step. Put a sound on a step that already has one and the new sound takes its place.</p>
+<p>Press Q on a drum step and the next sound of the kit takes its place: step through all fourteen of them with Q, and back with A.</p>
+<pre class="try">TRY THIS: put a snare (SN, the second row) on the last step of the
+bar and listen to the drum cat play it.</pre>
+<h3 id="lesson-4-change-the-bass">Lesson 4: change the bass</h3>
+<p>Open the Bass tab. Each row is a note, so you change the bass line by putting notes on the rows you want. You can only choose notes that fit the song, so the bass cat cannot play a wrong note.</p>
+<pre>RETURN or a left click           a note on the cursor&#x27;s row; on a
+                                 note: take it away
+SHIFT+RETURN or a right click    a note that slides up into its
+                                 pitch, as dub basses do (a yellow
+                                 arrow); on a note: make it longer</pre>
+<p>A long note shows as a block followed by a bar for as long as it holds, from 1 to 4 steps. K changes the length too, and G makes a note slide or stop sliding. Q and A move the note under the cursor up and down the scale.</p>
+<p>The matrix shows seven notes at a time. To reach higher or lower notes, move the cursor past the top or the bottom row with CRSR, or click the arrows at the right edge of the matrix: the rows scroll.</p>
+<p>On the settings line, &quot;Len&quot; shows how long new notes are. Click it to change it, or play a note of the length you want first: new notes take the length of the last one you touched.</p>
+<h3 id="lesson-5-make-the-singer-sing">Lesson 5: make the singer sing</h3>
+<p>Open the Meows tab and put a meow on an empty step with RETURN or a left click. The singer meows. A meow on a higher row sings higher. Q and A move a meow up and down the scale, too.</p>
+<p>There are four kinds of meow, each with its own mark:</p>
+<pre>o   MEW    short and cheerful         (a ball)
+@   MEOW   the classic, up and down   (a heart)
+O   OOH    long and plaintive, with vibrato   (a ring)
+?   MRR?   rising, like a question</pre>
+<p>A right click or SHIFT+RETURN on a meow changes it to the next kind; so does K. The four marks at the right end of the settings line show which kind new meows get: that one is white. Click another to choose it.</p>
+<h3 id="lesson-6-the-dub-echo">Lesson 6: the dub echo</h3>
+<p>Every meow comes back as an echo, a little darker and quieter. Grey marks in the singer&#x27;s matrix show where the echoes land.</p>
+<p>Press E to change how far apart the echoes are, from 2 to 8 steps, or switch them off. With the mouse, click along the &quot;Echo&quot; slider at the left of the singer&#x27;s settings line: off, 2, 3, 4, 6 and 8 steps.</p>
+<pre class="try">TRY THIS: set the echo to 3 and put two meows a bar apart. Now
+you have a real dub song!</pre>
+<h3 id="lesson-7-faster-slower-stop">Lesson 7: faster, slower, stop</h3>
+<p>Press + to play faster and - to play slower, or click the - and + next to the tempo. The tempo shows in beats per minute.</p>
+<p>SPACE stops the band and starts it again from the top. The play button is a pause button: it stops the band where it is and goes on from there. The stop button always goes back to the top.</p>
+<pre class="try">TRY THIS: open the Drums tab and click along the &quot;Swing&quot; slider.
+The off-beat steps come later and later, and the beat starts to
+roll.</pre>
+<p>That&#x27;s it, your first song! In the next chapters you will make it longer, change its key and play it live.</p>
+<h2 id="4-bars-and-songs"><small>Chapter 4</small>Bars and songs</h2>
+<p>A song is more than one bar. CATSYNTH 64 keeps four bars for every song, called A, B, C and D, and plays them in an order called the chain.</p>
+<p>The bottom line shows the four bars, ABCD, with the one you are editing in cyan. Next to them are a red - and a green +, and then the chain, for example AAAB: the band plays bar A three times, then bar B, then starts again. The bar that is playing now is shown in yellow. A chain can be up to 16 bars long.</p>
+<pre>F1  edit bar A          F3  edit bar B
+F5  edit bar C          F7  edit bar D
+C   choose the next chain: AAAB, AABB, ABAC, ABCD, A, AB, AAABAAAC
+X   copy bar A into the bar you are editing
+DEL clear the open cat&#x27;s steps in the bar you are editing</pre>
+<p>With the mouse, click a letter A B C D to edit that bar. To write your own chain:</p>
+<pre>click a bar of the chain     it becomes the next bar: A, B, C, D
+right-click it               the one before: D, C, B, A
++ (green)                    one bar more at the end (the last
+                             one again)
+- (red)                      one bar less (one is the least)
+
+TRY THIS: make a twelve-bar song. Click + until the chain is twelve
+bars long, then click the bars until it reads AAAABBAACDAA. Put a
+fill in bar C and a stop in bar D.</pre>
+<p>The playhead above the matrix only shows while the bar you are editing plays. Edit bar B in an AAAB song and it comes round once every four bars.</p>
+<p>Every style comes with its own bars: a fill, a dub drop where the bass goes away, a turnaround. The blues shuffle even plays a full twelve-bar blues.</p>
+<pre class="try">TRY THIS: press F3 to edit bar B, open the Bass tab and press DEL.
+Now the bass cat takes a rest every fourth bar.</pre>
+<h3 id="ten-song-slots">Ten song slots</h3>
+<p>CATSYNTH 64 keeps ten whole songs in memory, one in each SONG SLOT, on the keys 1 to 9 and 0. When you switch it on, the slots hold the songs of the ten styles: slot 1 the dancehall song, slot 2 the roots song, and so on to slot 0, the shuffle.</p>
+<p>Press a number key to open that slot. While the band plays, it finishes the bar first, so the groove never stumbles: the settings line says &quot;Next bar: slot 3&quot;, and on the bar line the new song starts from its top, at the first bar of its chain. Pressed while the band is stopped, the slot opens at once. Changed your mind? Press the key of the slot that is open, and the switch is called off.</p>
+<p>Every slot keeps its own song: the bars, the chain, the tempo, the mode, the transposes and the settings pages. Edit slot 1, go to slot 3, come back, and your edits are all still there. The slots last until you switch the computer off, so save the songs you want to keep on a disk (Chapter 8).</p>
+<p>The bottom line starts with the open slot&#x27;s key and its name: the style&#x27;s name, or the name of the file once the slot was loaded from the disk or saved to it (its first nine letters). Click the name to go to the next slot (at the end of the bar while the band plays; click again to go on to the one after).</p>
+<pre class="try">TRY THIS: in slot 1 put a few snares on the drums. Press 3: the
+steppers come in at the next bar. Press 1 again, and the
+dancehall song is back with your snares.</pre>
+<h3 id="new-sounds-for-a-song">New sounds for a song</h3>
+<p>Hold SHIFT and press a number key, and the open song gets the sounds of that style: its drum kit, its bass sound, its key (the root note) and its scale, and the style&#x27;s harmony. Your bars, the chain, the tempo and the settings pages stay as they are. The bass line moves to the new key and the meows fit themselves to the new scale, so the song keeps its shape in a new dress. While the band plays, this too waits for the end of the bar (&quot;New sounds at the next bar&quot;).</p>
+<p>THE STYLE LIST. Right-click the name at the bottom left, and the style list covers the matrix: the ten styles in two columns, from &quot;1 Dancehall&quot; to &quot;0 Shuffle&quot;, the open song&#x27;s style in white. Click a style, or press its number key, and the open song gets its sounds, as with SHIFT. T, or another right click on the name, closes the list and changes nothing.</p>
+<pre class="try">TRY THIS: press 9 for the acid song, then SHIFT+5. The acid riff
+now plays in the bossa&#x27;s F lydian, on the bossa&#x27;s kit and bass.
+SHIFT+9 brings the squelch back.</pre>
+<h2 id="5-keys-modes-and-scales"><small>Chapter 5</small>Keys, modes and scales</h2>
+<p>Each style has a scale, the set of notes that sound right in it. The bass and the singer only ever play notes of that scale.</p>
+<h3 id="change-the-mode">Change the mode</h3>
+<p>Press M, or click the mode on the bottom line, to play the whole song in another mode. The mode shows in yellow when it is not the style&#x27;s own:</p>
+<pre>Own  the style&#x27;s own scale        Maj  major (bright)
+Min  minor (sad)                  Dor  dorian (cool)
+Phr  phrygian (dark, Spanish)     Mix  mixolydian (rocky)
+Lyd  lydian (dreamy)              Blu  blues</pre>
+<p>Your notes are not changed. The band plays each note as the same step of the new scale, so a melody keeps its shape. The names at the start of the bass and singer rows change to the new notes. Press M until Own comes back and the song is exactly as before.</p>
+<h3 id="transpose">Transpose</h3>
+<pre>, and .   move the singer down or up the scale
+&lt; and &gt;   move the bass down or up the scale (SHIFT with , and .)</pre>
+<p>Both go up to seven steps of the scale either way, and both stay in key. Each cat shows its own on its settings line as &quot;Key - n +&quot;; click the - or the + there to change it.</p>
+<h3 id="harmony-with-a-second-sid">Harmony (with a second SID)</h3>
+<p>Press H, or click &quot;Harm&quot; on the singer&#x27;s settings line, and a second singer joins in, a third or a fifth above the first. Do it again to change it, and once more to switch it off. Harmony needs a second SID chip; without one the setting shows &quot;--&quot;.</p>
+<p>The harmony is not kept with a song: opening a slot, loading a song or giving a song new sounds (SHIFT and a number key) brings back the style&#x27;s own harmony.</p>
+<h2 id="6-the-settings-pages"><small>Chapter 6</small>The settings pages</h2>
+<p>Every cat has a voice of its own, and so can yours. Each tab has a SETTINGS PAGE that changes how its cat sounds.</p>
+<p>TO OPEN IT: click the tab that is already open, or press T. The page covers the matrix; the band plays on. The settings line names the page (Drum tweaks, Bass tweaks or Meow tweaks) and reminds you how it works.</p>
+<p>TO CLOSE IT: click the open tab again, press T, click &quot;T back&quot; at the right of the settings line, or click another tab. C= on a page takes you straight to the next cat&#x27;s page.</p>
+<p>Every setting on a page reads</p>
+<pre>      Label &lt;value&gt;
+
+click &lt; or &gt;          one step down or up
+right-click it        back to the value the band made it with
+click the label       select it (the white one), for the keys</pre>
+<p>A setting with a box, [ ] Label, is on or off: click the box or its name to tick it, [x], or untick it.</p>
+<pre>CRSR down / up        select the next / the one before
+CRSR right / left     one step up / down (so do Q and A)
+RETURN                play the cat
+SHIFT+RETURN          back to the value the band made it with
+P (or click Preview)  [ ] Preview on / off
+T                     back to the matrix</pre>
+<p>The settings line at the bottom reads, on the Meows page:</p>
+<pre>    Meow tweaks  RMB reset  [ ] Preview  T back</pre>
+<p>RMB reset reminds you that a right click puts a setting back. With [x] Preview ticked, every change plays the cat at once, so you hear what you did. It starts unticked: while the band plays you hear the change in the music, without an extra kick or note on top. RETURN always plays the cat. Most numbers show 0 for &quot;as the band made it&quot;, with + and - steps either side of it.</p>
+<h3 id="the-meows-page">The meows page</h3>
+<p>One row for each kind of meow: Mew, Meow, Ooh and Mrr?. Click a meow&#x27;s mark or name to hear it (Preview or not); new meows will be of that kind. (A right click on one of the four meow marks on the Meows tab&#x27;s settings line opens this page on that meow&#x27;s row.) Each row has three settings:</p>
+<pre>BEND    how far the meow swoops on its way to the note. At -8 the
+        cat sings the note straight; at +8 the swoop is four times
+        as wide as made. The meow always lands on its note, so it
+        stays in key. If a swoop would leave the cat&#x27;s range, the
+        cat makes it a little smaller.
+VOWEL   how wide the cat opens its mouth. At -8 a closed &quot;mmm&quot;; at
+        +8 three times as wide as made, a bright &quot;aah&quot;.
+TONE    the whole vowel darker (-8) or brighter (+8).</pre>
+<p>Each goes from -8 to +8, and 0 is the meow as the band made it. The echoes and the harmony singer follow the same settings.</p>
+<p>Under the four rows, CAT SIZE sets how loud the singer is: a bigger cat sings louder. Click &lt; for a smaller cat, &gt; for a bigger one, and right-click it for the Fat Cat again:</p>
+<pre>FAT CAT   as the band made it, full voice
+TOMCAT    a little quieter
+KITTEN    clearly quieter
+NEWBORN   a tiny mew, about a third as loud</pre>
+<p>A SID has no volume knob per voice, so a smaller cat sings a softer held note and a thinner pulse. The echoes and the harmony singer are the same size as the singer.</p>
+<pre class="try">TRY THIS: give the Mew a Bend of +8 and a Vowel of -8, and put a few
+mews on the off-beats. Then try the opposite: Bend -8, Vowel +8.</pre>
+<h3 id="the-drums-page">The drums page</h3>
+<pre>SIDECHAIN  0 (off) to 8. Every kick (BD or BM) makes the bass duck:
+           it gets quieter and thinner, then swells back over about
+           half a beat. The higher the number, the deeper the duck.
+           (The bass cat does it by narrowing his pulse wave.) The
+           page reminds you: &quot;Each kick ducks the bass&quot;.
+TUNE       the whole kit lower or higher, from -8 (half the pitch)
+           to +8 (one and a half times); 0 is as made.</pre>
+<p>The drums have no Level. A drum hit is nearly all attack, and the softer held note that turns the other cats down does next to nothing to it. To hear more of the drums, turn the bass down (Level, on the Bass page) or make the singer smaller (Cat Size).</p>
+<pre class="try">TRY THIS: in the disco song (press 6) set the Sidechain to 8
+and listen to the bass pump with the kick.</pre>
+<h3 id="the-bass-page">The bass page</h3>
+<pre>LEVEL    how loud the bass is: 0 as made, down to -8, about a third
+         as loud. As with Cat Size, the cat plays a softer held note
+         and a thinner pulse. The bass delay follows it.
+DELAY    off, 1, 2, 3, 4, 6, 8 or 12 steps. The bass comes back that
+         many steps later, quieter, like the singer&#x27;s echo. The delay
+         plays on the third voice of the second SID, so it needs a
+         second SID; without one the page says &quot;Delay: on SID 2&quot;.
+WAVE     Style (the style&#x27;s own sound), Pulse, Saw or Tri. Saw and
+         Tri sound quieter on the low notes.</pre>
+<p>On the right are three boxes:</p>
+<pre>[ ] DUB FILTER   (next to Delay) every repeat of the bass delay goes
+         through the second SID&#x27;s filter with its resonance all the
+         way up. The filter opens bright and closes down to the
+         bass&#x27;s own notes over the repeat: a ringing dub &quot;wow&quot; on
+         the echo. That filter also shapes the singer&#x27;s echoes and
+         the harmony, so they ring a little more too, and while one
+         of them sings its vowel steers the filter and the repeat
+         is filtered with it.
+[ ] MEOWIZE   the bass goes through the singer&#x27;s filter too, so the
+         meow vowels give the bass a wah.
+[ ] RES BOOST turns the filter&#x27;s resonance all the way up, and
+         with Meowize on every bass note opens the filter and lets
+         it close again: an acid squelch on each note. The filter is
+         shared, so while a meow sings it steers the filter, and the
+         meows ring too (a little less on an old 6581 chip, which
+         squeals sooner).
+
+  TRY THIS: in the acid song (press 9) tick Meowize and Res
+  boost, and let the bass squelch between the meows.
+
+  TRY THIS: in the roots song (press 2), with a second SID, set
+  the Delay to 3 and tick Dub filter. Then load DUB TECHNO NAP from
+  the program disk: it is made that way.</pre>
+<p>Each style&#x27;s song sets everything on all three pages; NEKO TRAP (slot 8) even comes with meows of its own and a light sidechain (Appendix B). The settings belong to the song: each slot keeps its own, they are saved with it, and new sounds from SHIFT and a number key leave them as they are.</p>
+<h2 id="7-live-play-and-the-looper"><small>Chapter 7</small>Live play and the looper</h2>
+<p>Now play the band like an instrument. Press the left arrow key (top left of the keyboard). The letter keys become pads:</p>
+<pre>Q W E R T Y U I O P     the drum cat&#x27;s sounds
+ A S D F G H J K L      the bass cat&#x27;s notes
+  Z X C V B N M , . /   the singer&#x27;s meows, low to high</pre>
+<p>The settings line shows a reminder of the live keys. Play along with the band! The bass pads play notes of the length you used last, and the meow pads meows of the kind you chose last.</p>
+<h3 id="recording">Recording</h3>
+<p>Press RETURN and the reminder turns red and the record button blinks: you are recording. Whatever you play goes into the bar that is playing, on the nearest step, and the matrix follows the bar that plays. Keep playing as the bar comes round, and add a drum here, a meow there. Press RETURN again to stop recording.</p>
+<p>The record button does all this in one go: click it and you are in live play with recording on. Click it again and you are back to editing with recording off.</p>
+<p>If you don&#x27;t like what you played, press DEL to take back everything you recorded since recording started.</p>
+<pre class="try">TRY THIS: press 7 for the funk song, click the record button and
+play Z X C on the singer row on beats 2 and 4.</pre>
+<p>While you play live, CRSR up and down move the singer up and down the scale and CRSR left and right do the same for the bass. SPACE still stops and starts the band.</p>
+<p>Press the left arrow key again to go back to editing.</p>
+<h2 id="8-the-disk-page-saving-your-songs"><small>Chapter 8</small>The disk page: saving your songs</h2>
+<p>Your songs go on a disk in drive 8, each under a name of your own. The disk page always works on the open song slot (Chapter 4): it loads into it and saves from it.</p>
+<p>TO OPEN THE DISK PAGE: press S or L, or click the small floppy disk at the right end of the frame under the matrix. The page covers the panel, and the band keeps playing while you look around. The drive reads the disk&#x27;s directory at once, just like LOAD&quot;$&quot;,8 would: for a moment the screen goes blank and the music pauses while the drive works, then the page shows</p>
+<pre>* the disk&#x27;s name and ID at the top,
+* its files, six at a time: the blocks each one takes, its &quot;NAME&quot;
+  and its type (PRG for songs). When there are more, click the
+  arrows at the right to scroll,
+* how many blocks are free,
+* the Name field: the name to load, save or delete,
+* a big 5 1/4&quot; floppy at the left. Click it to read the directory
+  again, for example after you change the disk.</pre>
+<p>CHOOSE A NAME: click a file (or move through the list with CRSR down and up) and it turns white with a &gt; in front; its name goes into the Name field. Or type a name: letters, digits, space, + - and . (up to 16 characters). DEL rubs out the last character.</p>
+<p>Then click a button on the line below the page, or press its key:</p>
+<pre>Load    (green)       RETURN         load the song named in the field
+Save    (yellow)      SHIFT+RETURN   save the song under that name
+Delete  (light red)   F7             delete that file from the disk
+Dir     (cyan)        F1             read the directory again
+Back    (white)       RUN/STOP       back to the panel
+New     (light blue)  (click it)     new songs in the slots</pre>
+<p>TO LOAD: the song goes into the open slot, in place of the one that was there (save that one first if you want to keep it). The page closes, the song plays from the top, the settings line says &quot;Loaded&quot;, and the slot takes the file&#x27;s name on the bottom line.</p>
+<p>TO SAVE: the open slot&#x27;s song is saved, and the slot takes the name. If the name is new, the song shows up in the list and the page says &quot;Saved&quot;. If a file of that name is on the disk already, the page asks first:</p>
+<pre>    Overwrite NAME?  Yes  No</pre>
+<p>Click Yes or press Y to replace it; No or N keeps the old one.</p>
+<p>TO DELETE: the page asks &quot;Delete NAME?  Yes  No&quot; in the same way, then says &quot;Deleted&quot;.</p>
+<p>NEW SONGS. Click New, at the right after Back, and the page asks</p>
+<pre>      New:  This slot  All slots  Defaults  No
+
+This slot  (T)   a new, empty song in the open slot, in its style:
+                 the style&#x27;s tempo, sounds and settings as the band
+                 made them, a chain of one bar A and not a step on
+                 it. The slot gets the style&#x27;s name again.
+All slots  (A)   the same for all ten slots, each in the style of
+                 the song it holds
+Defaults   (D)   the ten styles&#x27; songs back in all ten slots, as
+                 when you switched on
+No         (N)   nothing changes (so does RUN/STOP)</pre>
+<p>Then the page closes and the open slot starts from the top (playing on if the band was playing), with a message: &quot;A new song in this slot&quot;, &quot;Ten new songs&quot; or &quot;The ten styles&#x27; songs are back&quot;. Songs you have not saved are gone, so think twice before All slots and Defaults.</p>
+<p>If anything goes wrong, the bottom line of the page tells you what (Appendix D).</p>
+<p>A song keeps everything: the style, its four bars, the chain, the tempo, the swing, the echo, the mode, both transposes and everything on the three settings pages. Nearly every song takes a single block on the disk; a very full one takes two.</p>
+<p>Songs saved with an older CATSYNTH 64 load just the same, also the CATSONG0 to CATSONG9 of the old save slots: load them like any other name. Songs from before the settings pages load with the settings as the band made them; songs from the days of the old drum kit have their drums changed to the new kit as they load.</p>
+<pre class="try">TRY THIS: type DUB NIGHT into the Name field and press
+SHIFT+RETURN: the bottom line now says DUB NIGHT. Press 2 for
+another slot, open the disk page, click DUB NIGHT in the list and
+press RETURN. Your song is in slot 2 too.</pre>
+<h3 id="ten-techno-songs">Ten techno songs</h3>
+<p>The CATSYNTH 64 disk comes with ten techno songs by the band. Open the disk page with the program disk in the drive and load one: it goes into the open slot and plays at once, and it is yours to change and save under a name of your own (on a disk of your own, if you like to keep the program disk as it is).</p>
+<p>Load them into the slots and you have a techno set on the number keys: press 1, load ACID ALLEYCAT; press 2, load BERLIN BASEMENT; and so on. Then play the set live, switching songs on the bar line.</p>
+<pre>ACID ALLEYCAT     a squelchy 303 line through the singer&#x27;s filter
+BERLIN BASEMENT   kicks, a rim and a dark echoing ooh
+DETROIT WHISKERS  a saw bass and a hopeful meow riff
+DUB TECHNO NAP    echoing ooh chords and a bass delay (second SID)
+HARD PURR         150 bpm, booms on the four, a deep sidechain
+LASER POINTER     the mews as laser zaps, chasing the dot
+MINIMAL MOUSER    lots of air and a kitten&#x27;s mews
+RAVE OF 9 LIVES   150 bpm, a bright meow hook, a breakdown, a build
+TECHNO TABBY      the straight four, a rolling offbeat bass
+WAREHOUSE KITTY   peak time: the squelch, mrr? chops, a long drop</pre>
+<p>Each one uses a style&#x27;s sounds (the style list shows which, in white) with its own bars, tempo, chain and settings: look at its settings pages to see how it is made, or give it another style&#x27;s sounds with SHIFT and a number key. BERLIN BASEMENT and DUB TECHNO NAP have a bass delay, which needs a second SID: without one they play without it.</p>
+<h2 id="a-key-chart"><small>Appendix A</small>Key chart</h2>
+<h3 id="editing">Editing</h3>
+<pre>1-9, 0          open song slot 1-9, 10 (playing: at the end of the
+                bar; the open slot&#x27;s key: a waiting switch off)
+SHIFT+1-9, 0    the open song gets that style&#x27;s sounds: kit, bass,
+                key, scale (playing: at the end of the bar)
+SPACE           play / stop (from the top)
++ -             faster / slower
+C= (Commodore)  open the next cat&#x27;s tab
+CTRL+1 2 3      mute / unmute the drums, bass, meows
+CRSR            move the cursor (SHIFT: left, up); past the top or
+                the bottom row the bass and singer rows scroll
+RETURN          the cell&#x27;s left job: drums: the row&#x27;s left sound;
+                bass: a note; singer: a meow (on one: off)
+SHIFT+RETURN    the cell&#x27;s right job: drums: the row&#x27;s right sound;
+                bass: a sliding note (on one: its length 1-4);
+                singer: on a meow: the next kind
+Q  A            value up / down: drum sound, note, meow pitch
+K               bass length 1-4, meow kind
+G               bass slide on / off
+F1 F3 F5 F7     edit bar A B C D
+C               next chain
+X               copy bar A here
+DEL             clear the open cat&#x27;s steps in this bar
+E               echo: off, 2, 3, 4, 6, 8 steps
+M               mode
+, .             singer transpose
+&lt; &gt;             bass transpose (SHIFT with , and .)
+H               harmony (second SID)
+S  L            the disk page
+T               the open cat&#x27;s settings page (and back)
+RUN/STOP        help card (any key or click closes it)
+&lt;- (left arrow) live play</pre>
+<h3 id="settings-pages">Settings pages</h3>
+<pre>CRSR down / up  the next / the setting before
+CRSR right/left one step up / down (SHIFT: down)
+Q  A            one step up / down
+RETURN          play the cat
+SHIFT+RETURN    the setting back to as made
+P               Preview on / off (a change plays the cat)
+C=              the next cat&#x27;s page
+T               back to the matrix
+
+The number keys (and SHIFT with them), SPACE, + -, C, E, M, H, the
+transposes, CTRL+1 2 3, S and L work on the pages, too, and RUN/STOP
+still brings up the help card.</pre>
+<p>STYLE LIST (right-click the slot&#x27;s name)</p>
+<pre>1-9, 0          the open song gets that style&#x27;s sounds (the list
+                closes)
+T               back to the matrix, nothing changed</pre>
+<h3 id="disk-page">Disk page</h3>
+<pre>A-Z 0-9 space   type the name (also + - .)
+DEL             rub out the last character
+CRSR down / up  the next / the file before (SHIFT: up)
+RETURN          Load
+SHIFT+RETURN    Save
+F7              Delete
+F1              Dir: read the directory again
+Y  N            Yes / No when the page asks
+T  A  D  N      after New: This slot, All slots, Defaults, No
+RUN/STOP        back to the panel (when the page asks: No)</pre>
+<h3 id="live-play">Live play</h3>
+<pre>Q ... P         drum pads
+A ... L         bass pads
+Z ... /         meow pads
+RETURN          record on / off
+DEL             undo the last recording
+CRSR up/down    singer transpose
+CRSR left/right bass transpose
+SPACE           play / stop
+&lt;- (left arrow) back to editing</pre>
+<h3 id="mouse-port-1">Mouse (port 1)</h3>
+<pre>move over the matrix     move the cursor
+left / right click       the cell&#x27;s left / right job (as RETURN and
+                         SHIFT+RETURN)
+click a tab              open that cat
+click the open tab       its settings page (and back)
+right-click a tab        mute / unmute that cat
+&gt; # o                    play / pause, stop, record
+- +                      slower / faster
+the arrows at the right  scroll the bass and singer rows
+the settings line        Swing, Echo, Key - +, Len, Harm, meow kind
+                         (right-click a meow kind: its settings)
+the floppy under the     the disk page
+matrix
+the slot&#x27;s name          left: the next slot; right: the style
+(bottom line)            list (again: closed)
+a style on the list      the open song gets its sounds
+mode                     next mode
+A B C D                  edit that bar
+the chain                a bar: the next A-D (right: the one
+                         before)
+- +                      the chain one bar shorter / longer
+
+On a settings page: &lt; &gt; step, a right click puts the setting back
+as made, a click on the label selects it, a click on a box ticks it;
+on the Meows page a click on a meow&#x27;s mark or name plays it. On the
+settings line: [ ] Preview on / off, T back. On the disk page: click
+a file, the floppy picture (Dir), the buttons (New only by click),
+Yes and No, and after New: This slot, All slots, Defaults, No.
+
+The first click only wakes the pointer. Keys do nothing while a
+mouse button is held.</pre>
+<h3 id="joystick-port-2">Joystick (port 2)</h3>
+<pre>The joystick is a second mouse: everything above works with it.
+
+move                move the pointer (faster as you hold it)
+FIRE                a left click (when you let go)
+FIRE held 1/2 sec   a right click
+
+Keys do nothing while the joystick is held.</pre>
+<h2 id="b-the-ten-styles"><small>Appendix B</small>The ten styles</h2>
+<pre>KEY STYLE      BPM  SCALE               WHAT TO LISTEN FOR
+1   DANCEHALL   94  D major pentatonic  the sliding digital bass
+2   ROOTS       75  A minor pentatonic  the one drop: beat 1 empty
+3   STEPPERS   125  E dorian            a kick on every beat
+4   SKA        150  G major pentatonic  the off-beat strum
+5   BOSSA      125  F lydian            the rim clave, root-fifth bass
+6   DISCO      125  A dorian            the octave bass, open hats
+7   FUNK       107  E dorian            ghost snares, the &quot;one&quot;
+8   NEKO TRAP  150  E hirajoshi         half time, 808 slides, weird
+                                        meows (see below)
+9   ACID       125  A phrygian          the squelchy sliding bass
+0   SHUFFLE    107  E blues             a twelve-bar blues</pre>
+<p>When you switch on, song slot 1 holds the dancehall song, slot 2 the roots song, and so on to slot 0, the shuffle. SHIFT and a style&#x27;s key gives any song that style&#x27;s sounds, its key and its scale (Chapter 4). The BPM and the settings come with a style&#x27;s song, not with its sounds.</p>
+<p>NEKO TRAP is the style for the settings pages (Chapter 6). Its mews are dark, zippy chirps (Bend +6, Vowel -7, Tone -2), its meows wail like a siren (+4, +7, +2), its ooh is a flat robot hum (-8, -5, -2) and its mrr? wobbles (+3, +2, +1); the kick ducks the bass a little (Sidechain 3). The scale is hirajoshi, the Japanese pentatonic, and the bass is an 808-style hum that slides up into its notes.</p>
+<p>Every style&#x27;s bass is tuned to be loud and punchy, so the bass cat is heard on a TV speaker, too.</p>
+<p>NOTE: In the shuffle a step is an eighth note, not a sixteenth, so a bar of the matrix holds two bars of the blues. The panel counts steps as sixteenths and shows the shuffle&#x27;s tempo as 54.</p>
+<h3 id="the-drum-kit">The drum kit</h3>
+<p>Every style has the same fourteen drum sounds, two to a row:</p>
+<pre>ROW  LEFT (block)      RIGHT (ball)
+1    BD  kick          BM  boom
+2    SN  snare         BP  bap
+3    CP  clap          RS  rim
+4    CH  closed hat    OH  open hat
+5    SH  shaker        RD  ride
+6    GH  ghost         DU  dust
+7    SK  skank         DR  drop</pre>
+<p>Some styles play their own version of a sound: disco has its own open hat, acid its own clap and open hat.</p>
+<p>Every riff is original, written in the style of its genre.</p>
+<h2 id="c-what-the-screen-tells-you"><small>Appendix C</small>What the screen tells you</h2>
+<p>Here is the panel with the Drums tab open. In this guide&#x27;s pictures # is a block, o a ball, @ a heart, O a ring, V the playhead and D the little floppy disk.</p>
+<pre>  +-----+----+------+---+---+---+--------+
+  |Drums|Bass|Meows | &gt; | # | o | -  94 +|
+  |     +----+-----V+---+---+---+--------+
+  |BD BM # . . . . . . . # . o . . . . . |
+  |SN BP . . . . # . . . . . . . # . . . |
+  |CP RS . . . . . . . . . . . . . . . o |
+  |CH OH . . # . . . # . . . . . . . o . |
+  |SH RD . . . . . . . . . . . . . . . . |
+  |GH DU . . . . . . . . . . . . . . . . |
+  |SK DR . . . . . . . . . . . . . . . . |
+  +----------------------------------- D +
+  Swing [O-----] LMB Kick     RMB Boom
+   1 Dancehall Own ABCD -+AAAB</pre>
+<p>THE TAB BAR (top)</p>
+<pre>Drums Bass Meows    the tabs; the open one bold, in its cat&#x27;s
+                    colour: white, orange, light blue; a muted
+                    cat&#x27;s name light red
+&gt;                   play (white); a pause sign (green) while playing
+#                   stop
+o                   record (light red; blinks red and white while
+                    recording)
+- 94 +              the tempo in beats per minute (yellow)</pre>
+<p>THE MATRIX (the middle)</p>
+<pre>V on the frame      the playhead: the step that plays, while the bar
+                    you are editing plays
+.                   an empty step (brighter on the beats)
+a box               the cursor on an empty step
+
+DRUMS   the row&#x27;s two sounds at its start, each in its own colour;
+        a block is the left sound, a ball the right one
+BASS    a note name at the start of each row, the root in orange;
+        a block is a note, followed by a bar while it holds; a
+        yellow arrow is a note sliding in; a light red block is a
+        note that is off the scale of the moment (after a change of
+        mode). The arrows at the right edge scroll the rows.
+MEOWS   the note each row sings at its start; a ball is a mew, a
+        heart a meow, a ring an ooh, a ? a mrr; grey marks are where
+        the dub echoes land. The arrows at the right edge scroll.</pre>
+<p>THE SETTINGS LINE (next to last)</p>
+<pre>DRUMS   Swing [O-----]      the swing, from straight to heavy
+        LMB Kick RMB Boom   what the left / right buttons put
+                            on the cursor&#x27;s row
+BASS    Key - 0 +           the bass transpose
+        Len 2               the length new notes get (click it)
+        RMB &gt;Slide          the right button makes a sliding note
+MEOWS   Echo [----O]        the echo: off, 2, 3, 4, 6, 8 steps
+        Key - +2 +          the singer transpose
+        Harm Off            the harmony: Off, 3rd, 5th (&quot;--&quot; without
+                            a second SID)
+        o @ O ?             the meow kinds; the white one is what
+                            new meows get (click to choose;
+                            right-click: that meow&#x27;s settings)
+
+The settings line also shows messages (Appendix D) and, in live
+play, the live keys (red while recording).</pre>
+<h3 id="the-frame-under-the-matrix">The frame under the matrix</h3>
+<pre>D                   the floppy disk icon (light blue, at the right
+                    end): click it for the disk page</pre>
+<p>THE STATUS LINE (bottom line)</p>
+<pre>1             the open song slot&#x27;s key (1-9, 0)
+Dancehall     its name: the style&#x27;s, or the file&#x27;s (its first nine
+              letters) once the slot was loaded or saved; click it
+              for the next slot, right-click it for the style list
+Own           the mode (yellow when it is not the style&#x27;s own)
+ABCD          the bars; the one you are editing is cyan
+- +           the chain one bar shorter (red) / longer (green)
+AAAB          the chain (up to 16 bars); the bar playing now is
+              yellow; click a bar to change it</pre>
+<h3 id="the-settings-pages">The settings pages</h3>
+<p>A settings page takes the place of the matrix. Here is the Meows page of the neko trap style; the selected setting&#x27;s label is white:</p>
+<pre>  |o Mew  Bend &lt;+6&gt; Vowel &lt;-7&gt; Tone &lt;-2&gt; |
+  |@ Meow Bend &lt;+4&gt; Vowel &lt;+7&gt; Tone &lt;+2&gt; |
+  |O Ooh  Bend &lt;-8&gt; Vowel &lt;-5&gt; Tone &lt;-2&gt; |
+  |? Mrr? Bend &lt;+3&gt; Vowel &lt;+2&gt; Tone &lt;+1&gt; |
+  |                                      |
+  |  Cat Size &lt;Fat Cat&gt;                  |
+  |                                      |
+  +----------------------------------- D +
+  Meow tweaks  RMB reset  [ ] Preview  T back</pre>
+<p>And here is the Bass page, as the band made it, on a C64 with one SID:</p>
+<pre>  | Level      &lt; 0&gt;                      |
+  |                                      |
+  | Delay      &lt;off&gt;     [ ] Dub filter  |
+  |                                      |
+  | Wave       &lt;Style&gt;   [ ] Meowize     |
+  |                                      |
+  | Delay: on SID 2      [ ] Res boost   |
+  +----------------------------------- D +
+  Bass tweaks  RMB reset  [ ] Preview  T back</pre>
+<p>The tab bar stays above the page. The settings line names the page and its controls. A value of 0 is as the band made it.</p>
+<p>The style list (a right click on the slot&#x27;s name) opens in the same place; the open song&#x27;s style is white:</p>
+<pre>    |                                      |
+    |                                      |
+    |  1 Dancehall       6 Disco           |
+    |  2 Roots           7 Funk            |
+    |  3 Steppers        8 Neko trap       |
+    |  4 Ska             9 Acid            |
+    |  5 Bossa           0 Shuffle         |
+    +----------------------------------- D +
+    Styles: new sounds, same bars    T back
+
+DRUMS   Sidechain &lt;0&gt;, Tune &lt;0&gt;, and the hint &quot;Each kick ducks the
+        bass&quot;
+BASS    Level &lt;0&gt;; Delay &lt;off&gt; and [ ] Dub filter; Wave &lt;Style&gt;
+        and [ ] Meowize; [ ] Res boost (and without a second SID
+        the hint &quot;Delay: on SID 2&quot;)
+MEOWS   a row for each kind: its mark and name, Bend, Vowel, Tone;
+        Cat Size under them</pre>
+<h3 id="the-disk-page">The disk page</h3>
+<p>The disk page covers the whole panel:</p>
+<pre>    +- Disk -drive 8 ----------------------+
+    |           &quot;CATSYNTH SONGS&quot; CS 2A     |
+    |          &gt;  1 &quot;DUB NIGHT&quot;       PRG^ |
+    |   ####      1 &quot;CATSONG3&quot;        PRG  |
+    |   #  #      1 &quot;SKA TIME&quot;        PRG  |
+    |   # ##      1 &quot;BLUES&quot;           PRG  |
+    |   ####      2 &quot;ACID 4&quot;          PRG  |
+    |             1 &quot;NEKO&quot;            PRGv |
+    |           657 blocks free.           |
+    |           Name DUB NIGHT_            |
+    +--------------------------------------+
+     Load  Save  Delete  Dir  Back   New
+     Click a song, then Load. RUN/STOP: back
+
+Disk  drive 8       the page; it always uses drive 8
+the top line        the disk&#x27;s name and ID
+the list            six files: blocks, &quot;NAME&quot;, type; the selected
+                    one white with a &gt;; ^ and v at the right when
+                    there are more (click to scroll)
+the floppy (left)   click it to read the directory again
+NNN blocks free.    the room left on the disk
+Name                the name Load, Save and Delete use
+the buttons         Load (green), Save (yellow), Delete (light red),
+                    Dir (cyan), Back (white), New (light blue)
+the bottom line     a hint, what the drive is doing (Reading...,
+                    Loading..., Saving..., Deleting...), a message,
+                    or a question with Yes and No (after New: This
+                    slot, All slots, Defaults, No)</pre>
+<h2 id="d-messages"><small>Appendix D</small>Messages</h2>
+<p>Messages appear on the settings line for a few seconds.</p>
+<pre>Loaded               the song came off the disk into the open
+                     slot and plays
+Next bar: slot N     slot N opens at the end of the bar (press the
+                     open slot&#x27;s key to call it off)
+New sounds at the    the open song gets the style&#x27;s sounds at the
+next bar             end of the bar
+A new song in this   New, This slot: an empty song in the open slot
+slot
+Ten new songs        New, All slots: an empty song in every slot
+The ten styles&#x27;      New, Defaults: the slots hold the ten styles&#x27;
+songs are back       songs again
+Needs a 2nd SID      harmony needs a second SID chip
+Harmony: 3rd up /    the harmony singer&#x27;s interval
+Harmony: 5th up /
+Harmony off</pre>
+<p>On the disk page, messages appear on the page&#x27;s bottom line:</p>
+<pre>Reading...           the drive reads the directory
+Loading... /         the drive is busy; the music pauses and the
+Saving... /          screen goes blank for a moment
+Deleting...
+Saved / Deleted      all went well
+Overwrite NAME?      a file of that name is on the disk: Yes (Y)
+                     replaces it, No (N) keeps it
+Delete NAME?         Yes (Y) deletes it, No (N) keeps it
+New:                 This slot (T), All slots (A), Defaults (D) or
+                     No (N)
+Type a name first    the Name field is empty
+Not a CatSynth song  that file is not a song (or is far too long
+                     for one, like the program itself)
+File not found       there is no file of that name on the disk
+Drive not ready      no drive 8, or no disk in it
+Disk full            no room for the song on the disk
+Write protected      the disk&#x27;s write-protect notch is covered
+Disk error NN        any other trouble; NN is the drive&#x27;s or the
+                     computer&#x27;s error number. Check the disk and
+                     try again.</pre>
+<h2 id="e-for-the-technically-minded"><small>Appendix E</small>For the technically minded</h2>
+<pre>* SID voice 1: bass. Voice 2: the singer, through the filter, used
+  as the vowel of the meow. Voice 3: drums. With a second SID
+  ($D420-$D4E0), six voices in all: its voice 1 the echoes, voice 2
+  the harmony, voice 3 the bass delay.
+* The sidechain is done with the bass&#x27;s pulse width: a SID has no
+  volume per voice, and ducking the master volume would duck the
+  whole band (and click on a 6581). Meowize routes the bass through
+  SID 1&#x27;s filter with the singer; Res boost sets that filter&#x27;s
+  resonance to 15 (11 on a 6581) and, with Meowize, sweeps the
+  cutoff down from the top over each bass note (while no meow
+  sings). The Dub filter does the same on SID 2: it routes the bass
+  delay&#x27;s voice into SID 2&#x27;s filter, sets its resonance to 15 (11 on
+  a 6581) and sweeps the cutoff from about 4 kHz down to the bass&#x27;s
+  low harmonics over about 32 frames on each repeat, while no echo
+  or harmony meow owns that filter.
+* Meows are synthesized, not sampled: a pulse wave through the
+  resonant lowpass, the cutoff moving like a cat&#x27;s jaw. They are
+  pitched in 1/16 semitones and land exactly on a scale degree.
+* Every note starts with a hard restart, so attacks are always
+  crisp.
+* 6581 and 8580 chips are told apart at start and the filter is set
+  for each.
+* NTSC machines play at PAL speed (one frame in six is skipped).
+* The tempo is kept in frames per step; the panel shows 750 divided
+  by it, in beats per minute (50 frames a second, 4 steps a beat).
+* The main loop is polled, on raster line 250. Two raster interrupts
+  split the screen: at line 146 (the last line of character row 11,
+  the write landing at cycles 58-67, before row 12&#x27;s badline) the
+  panel&#x27;s character set comes in, and at line 252 the stage&#x27;s goes
+  back. Both are switched off while the drive works. RESTORE does
+  nothing.
+* BASIC&#x27;s ROM is switched out, so the program may run up to $BFFF.
+  The KERNAL stays in for the disk and the interrupts.
+* The panel&#x27;s font lives at $E000, in the RAM under the KERNAL ROM:
+  in bank 3 the VIC sees the RAM there, the CPU writes through.
+* All eight sprites belong to the band. Below the stage the same two
+  interrupts lend sprite 7 (the singer&#x27;s microphone) to the mouse
+  pointer and give it back for the next frame.
+* The mouse is a 1351 in port 1, read through POTX and POTY. Its
+  buttons share the keyboard&#x27;s lines, so no key is scanned while
+  one is held. The joystick in port 2 drives the same pointer: 1,
+  then 2, then 4 pixels a frame as it is held; FIRE let go is a
+  left click, FIRE held for 25 frames a right click.
+* The disk page reads the directory as OPEN &quot;$&quot; on drive 8 and
+  parses the BASIC listing it returns (up to 48 files kept). Songs
+  are read with OPEN and CHRIN, at most 256 bytes, so a file that is
+  not a song can never overwrite memory.
+* A drum step holds one of 14 drum roles; each style maps every role
+  to a sound of its own kit.
+* The ten song slots live in the RAM after the program (they are
+  not loaded, the styles fill them at start): each one the 213-byte
+  song block, its 16 bytes of settings and a 16-letter name. The
+  open slot is a working copy; a switch puts it back and fetches the
+  other. A switch while playing waits for the last frame of step 16,
+  so the new song starts on the next bar&#x27;s first step, on time.
+* Song files are version 5: &quot;CS&quot;, the version, a 21-byte header,
+  the 16 bytes of the settings pages, then for each of the twelve
+  rows a 16-bit mask of the steps that play followed by their
+  values: 64 to 256 bytes, a PRG of one block or, when completely
+  full, two. Versions 1 to 4 still load: version 1 (the old
+  17-sound kit) has its drums converted, versions 1 and 2 load with
+  the settings as made, versions 3 and 4 have theirs converted.
+* The panel is drawn in UI Font V2 (regular and bold) by Scrap /
+  Genesis Project, 2022, CSDb release 224117, free to use. Thank
+  you, Scrap!
+
+                                HAVE FUN!</pre>
+<p>========================================================================</p>
+  <p class="next">The plain text version: <a href="download/MANUAL.TXT">MANUAL.TXT</a> (it is on the disk's zip, too).</p>
+
+  <footer>CatSynth 64 1.0 &middot; (c) 2026 illobo/netmilk &middot; MIT licence<br>
+  Font: <a href="https://style64.org/c64-truetype">C64 Pro Mono by Style64</a>.
+  Browser version: <a href="https://github.com/floooh/chips">floooh's chips</a> C64 emulator.</footer>
+</main>
+</body>
+</html>

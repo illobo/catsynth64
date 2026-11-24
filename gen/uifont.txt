@@ -1,0 +1,12 @@
+UI Font Regular & Bold V2
+by Scrap / Genesis Project (2022), https://csdb.dk/release/?id=224117
+
+"Feature rich font for User Interface Design, including uppercase,
+lowercase, regular and Bold. Off course everybody who wants to use this
+for a project is free to use it."  (the author's release notes)
+
+uifont.bin is the charset of the release's "ui font v2.prg" ($2000-$27ff
+there), unchanged: codes $00-$7f bold, $80-$ff regular; letters at the
+usual screen codes ($01-$1a lower case, $41-$5a upper case, +$80 for the
+regular weight), frame pieces, transport icons, sliders and the like at the
+other codes (see src/ui.asm for the ones CatSynth 64 uses).
