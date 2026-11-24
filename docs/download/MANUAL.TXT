@@ -57,6 +57,8 @@ WHAT YOU NEED
     C64 Ultimate a USB mouse, which the Ultimate turns into a 1351
   * A joystick in port 2 (you can play without one, too)
   * A blank disk if you want to save songs
+  * A second SID chip, if you have one (see below): the band sounds
+    bigger with it, and everything also works without
 
 LOADING THE PROGRAM
 
@@ -106,11 +108,32 @@ when you let go. Hold FIRE for half a second and it is the right
 button. Everything this guide says about clicks works with the
 joystick, too. While you hold the joystick, the keyboard is not read.
 
-NOTE: If your Commodore 64 has a second SID chip, or your C64 Ultimate
-has its second UltiSID set to address $D420, CATSYNTH 64 finds it by
-itself. The echoes, the harmony meow and the bass delay then play on
-the second chip, and the singer's harmony setting shows "Off" instead
-of "--". Everything else works the same with one SID.
+A SECOND SID
+
+The SID is the C64's sound chip, and it has three voices: CATSYNTH 64
+gives one to each cat. A second SID adds three more voices, and the
+band uses all of them:
+
+  * THE DUB ECHOES get a voice of their own. With one SID an echo can
+    only sound on the singer's voice, between her meows; with two the
+    echoes ring on while she sings the next meow.
+  * THE HARMONY SINGER: a second singer a third or a fifth above the
+    first (press H, Chapter 5).
+  * THE BASS DELAY: the bass comes back a few steps later, and with
+    the Dub filter its repeats sweep through the second chip's filter
+    (the Bass page, Chapter 6).
+
+There is nothing to switch on in CATSYNTH 64: it looks for a second
+SID at address $D420 (and at $D440, $D460 ... up to $D4E0) as it
+starts. On a C64 Ultimate or an Ultimate 64, set the second SID (the
+second UltiSID, or a real chip in the second socket) to $D420 in the
+Ultimate's menu, then load CATSYNTH 64. On a real C64 you need a
+dual-SID board set to one of those addresses.
+
+How to tell that it was found: the singer's settings line shows the
+harmony as "Off" (without a second SID it shows "--"), and the Bass
+page has no "Delay: on SID 2" reminder. Without a second SID
+everything else works just the same.
 
 
 ------------------------------------------------------------------------
@@ -301,6 +324,10 @@ marks in the singer's matrix show where the echoes land.
 Press E to change how far apart the echoes are, from 2 to 8 steps, or
 switch them off. With the mouse, click along the "Echo" slider at the
 left of the singer's settings line: off, 2, 3, 4, 6 and 8 steps.
+
+With a second SID chip (Chapter 1) the echoes get a voice of their
+own and keep ringing while the singer goes on with the next meow; with
+one SID they sound between her meows.
 
     TRY THIS: set the echo to 3 and put two meows a bar apart. Now
     you have a real dub song!

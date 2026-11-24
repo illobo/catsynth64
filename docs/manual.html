@@ -53,6 +53,9 @@ figure.shot { margin: 18px 0; }
 .shot img { width: 100%; height: auto; image-rendering: pixelated; display: block; border: 10px solid #222;
   border-radius: 6px; background: #000; }
 .shot figcaption { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
+.cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 32px; }
+.cols h3 { margin-top: 8px; }
+@media (max-width: 820px) { .cols { grid-template-columns: minmax(0, 1fr); } }
 .shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; }
 @media (max-width: 640px) { .shots { grid-template-columns: minmax(0, 1fr); } }
 .wrap { max-width: 1060px; margin: 0 auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; }
@@ -125,7 +128,7 @@ footer { max-width: 1060px; margin: 48px auto 0; color: var(--ink-soft); font-si
 <section class="chapter" id="1-setting-up">
 <div class="chap"><div class="num l1">1</div><div><div class="lbl">Chapter 1</div><h2>Setting up</h2></div></div>
 <h3 id="what-you-need">What you need</h3>
-<ul class="plain"><li>A Commodore 64 (PAL), a C64 Ultimate or an Ultimate 64</li><li>A disk drive as device 8 with the CatSynth 64 disk</li><li>A TV or monitor with sound turned up</li><li>A mouse in port 1 (you can play without one): a 1351, or on the C64 Ultimate a USB mouse, which the Ultimate turns into a 1351</li><li>A joystick in port 2 (you can play without one, too)</li><li>A blank disk if you want to save songs</li></ul>
+<ul class="plain"><li>A Commodore 64 (PAL), a C64 Ultimate or an Ultimate 64</li><li>A disk drive as device 8 with the CatSynth 64 disk</li><li>A TV or monitor with sound turned up</li><li>A mouse in port 1 (you can play without one): a 1351, or on the C64 Ultimate a USB mouse, which the Ultimate turns into a 1351</li><li>A joystick in port 2 (you can play without one, too)</li><li>A blank disk if you want to save songs</li><li>A second SID chip, if you have one (see below): the band sounds bigger with it, and everything also works without</li></ul>
 <h3 id="loading-the-program">Loading the program</h3>
 <p>Switch on the computer and the drive, put the disk in the drive and type:</p>
 <div class="screen">LOAD&quot;CATSYNTH64&quot;,8,1</div>
@@ -142,7 +145,11 @@ READY.</div>
 <p>While you hold a mouse button down, the keyboard is not read. Let go of the button before you press a key.</p>
 <h3 id="the-joystick">The joystick</h3>
 <p>The joystick in port 2 works exactly like the mouse: it moves the same pointer. Push it and the pointer moves, slowly at first and faster the longer you hold it. <kbd>FIRE</kbd> is the left mouse button: the click happens when you let go. Hold <kbd>FIRE</kbd> for half a second and it is the right button. Everything this guide says about clicks works with the joystick, too. While you hold the joystick, the keyboard is not read.</p>
-<p>NOTE: If your Commodore 64 has a second SID chip, or your C64 Ultimate has its second UltiSID set to address $D420, CatSynth 64 finds it by itself. The echoes, the harmony meow and the bass delay then play on the second chip, and the singer's harmony setting shows "Off" instead of "--". Everything else works the same with one SID.</p>
+<h3 id="a-second-sid">A second SID</h3>
+<p>The SID is the C64's sound chip, and it has three voices: CatSynth 64 gives one to each cat. A second SID adds three more voices, and the band uses all of them:</p>
+<ul class="plain"><li>THE DUB ECHOES get a voice of their own. With one SID an echo can only sound on the singer's voice, between her meows; with two the echoes ring on while she sings the next meow.</li><li>THE HARMONY SINGER: a second singer a third or a fifth above the first (press <kbd>H</kbd>, Chapter 5).</li><li>THE BASS DELAY: the bass comes back a few steps later, and with the Dub filter its repeats sweep through the second chip's filter (the Bass page, Chapter 6).</li></ul>
+<p>There is nothing to switch on in CatSynth 64: it looks for a second SID at address $D420 (and at $D440, $D460 ... up to $D4E0) as it starts. On a C64 Ultimate or an Ultimate 64, set the second SID (the second UltiSID, or a real chip in the second socket) to $D420 in the Ultimate's menu, then load CatSynth 64. On a real C64 you need a dual-SID board set to one of those addresses.</p>
+<p>How to tell that it was found: the singer's settings line shows the harmony as "Off" (without a second SID it shows "--"), and the Bass page has no "Delay: on SID 2" reminder. Without a second SID everything else works just the same.</p>
 </section>
 <section class="chapter" id="2-meet-the-band">
 <div class="chap"><div class="num l2">2</div><div><div class="lbl">Chapter 2</div><h2>Meet the band</h2></div></div>
@@ -204,6 +211,7 @@ o     RECORD. Live play with recording switched on (Chapter 7).
 <h3 id="lesson-6-the-dub-echo">Lesson 6: the dub echo</h3>
 <p>Every meow comes back as an echo, a little darker and quieter. Grey marks in the singer's matrix show where the echoes land.</p>
 <p>Press <kbd>E</kbd> to change how far apart the echoes are, from 2 to 8 steps, or switch them off. With the mouse, click along the "Echo" slider at the left of the singer's settings line: off, 2, 3, 4, 6 and 8 steps.</p>
+<p>With a second SID chip (Chapter 1) the echoes get a voice of their own and keep ringing while the singer goes on with the next meow; with one SID they sound between her meows.</p>
 <div class="box try"><b>Try this</b><p>set the echo to 3 and put two meows a bar apart. Now you have a real dub song!</p></div>
 <h3 id="lesson-7-faster-slower-stop">Lesson 7: faster, slower, stop</h3>
 <p>Press <kbd>+</kbd> to play faster and - to play slower, or click the - and + next to the tempo. The tempo shows in beats per minute.</p>
