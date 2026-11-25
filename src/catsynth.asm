@@ -29,13 +29,13 @@ WEB      = 0              ; the web edition (make web): the ten techno songs
                           ; built in, in the slots at start (slots.asm)
 ; sound choices, each 1 = on (build with -D NAME=0 for the other, to compare
 ; by ear; ab/CHANGES.md):
-LVROUND  = 1              ; Level / Cat Size scale the sustain rounded, never
+LVROUND  = 0              ; Level / Cat Size scale the sustain rounded, never
                           ; to 0 (sfx.asm srlvl)
-MEOWFIT  = 1              ; a meow the next one cuts short sings a flatter
+MEOWFIT  = 0              ; a meow the next one cuts short sings a flatter
                           ; Bend, so it ends near its note (seq.asm bcap)
-HR2      = 0              ; the hard restart 2 frames, the note's SR written
+HR2      = 1              ; the hard restart 2 frames, the note's SR written
                           ; after its gate-on (the ADSR delay bug; sfx.asm)
-LEGATO   = 0              ; a bass slide over a note still sounding glides
+LEGATO   = 1              ; a bass slide over a note still sounding glides
                           ; from its pitch, no restart (seq.asm legato)
 ECHOBAR  = 0              ; one SID, a lone meow in its bar: only the echoes
                           ; that end before it comes round again (0: both)
@@ -128,6 +128,8 @@ held    .macro key
         and #1 << (\key & 7)
         .endm
 
+STAGE_LEN  = $f00               ; the stage's bitmap: rows 0-11, 3840 bytes
+
         * = $0801               ; the BASIC stub: 2026 SYS start
         .word +, 2026
         .null $9e, format("%d", start)
@@ -136,6 +138,13 @@ held    .macro key
 start   sei
         lda #$36                ; no BASIC ROM: RAM up to $bfff (the KERNAL stays
         sta $01                 ; for the disk and the IRQ entry)
+        ldx #0                  ; the stage's bitmap: loaded at the end of the
+-       .for o = 0, o < STAGE_LEN, o += $100   ; program file, to $e000 under
+        lda stage_data+o,x      ; the KERNAL (writes go to the RAM), before
+        sta SCR_BITMAP+o,x      ; anything uses its room (the disk page's
+        .next                   ; buffers, the screen at $c000)
+        inx
+        bne -
         lda #<nmi_off           ; RESTORE (and RUN/STOP+RESTORE: RUN/STOP is the
         sta $0318               ; help key) does nothing
         lda #>nmi_off
@@ -260,6 +269,8 @@ attstyle  txa
         pla
         tax
         jsr seq_load            ; (not newstyle: the title owns the screen)
+        lda #1
+        sta title_busy          ; (~6000 cycles: the title's extras wait)
         lda #0
         sta attn
         lda #$ff
@@ -1717,3 +1728,10 @@ slotend
         .cerror slotend > title_end, "the song slots must fit in the title's room"
 
         .cerror * > $c000, "program runs into the screen at $c000"
+
+; the stage's bitmap (tools/screen.py): the file's last part, copied to
+; $e000 at start; its room is then the disk buffers' and the screen's
+stage_data
+        .binary "../gen/stage.bin"
+        .cerror * - stage_data != STAGE_LEN, "build/stage.bin: not 3840 bytes"
+        .cerror * > $d000, "the stage's bitmap runs into the I/O at $d000"

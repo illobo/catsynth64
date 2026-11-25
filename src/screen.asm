@@ -2,14 +2,15 @@
 ; The CatSynth screen: the cat band on a stage (drum cat left behind its
 ; kit, bass cat middle with a bass and an amp, singer cat right at a mic),
 ; stage lights over them, a panel below with a row for each cat's step
-; grid. The lights are colour RAM only (beams are dotted characters): no
-; raster tricks, nothing mid-screen, so the polled main loop stays as is.
-; The cats are hi-res characters as catsim64's title: the lowercase ROM
-; font in codes $00-$7f, the cats' cells and our glyphs in $80-$ff (reverse
-; video is gone). The instruments and the moving parts (sticks, paws) are
-; the 8 sprites, so a hit is a pointer and colour change: cheap, and on
-; screen in the frame it is asked for. Data: build/screen.inc
-; (tools/screen.py, art/band.py).
+; grid. The stage (rows 0-11) is a multicolour bitmap (art/stage_mc.py,
+; tools/stagemc.py): its lights are colour RAM only (the lit pixels are
+; the bitmap's %11), the rest of the screen is text (the split at row 12:
+; ui.asm's raster interrupts, title.asm polls it). Text rows use the
+; lowercase ROM font in codes $00-$7f and our glyphs in $80-$ff. The
+; instruments and the moving parts (sticks, paws) are the 8 sprites, so a
+; hit is a pointer and colour change: cheap, and on screen in the frame it
+; is asked for. Data: build/screen.inc, build/stage.bin (tools/screen.py,
+; art/band.py, art/stage_mc.py).
 ;
 ; Memory (VIC bank 3, $c000-$ffff: no character ROM image there, and a
 ; program from $0801 can grow to $bfff without meeting it):
@@ -19,9 +20,16 @@
 ;   $c7c0-$c7ff  free: block $1f
 ;   $c800-$cbff  charset $00-$7f: the lowercase ROM font, copied at init,
 ;                then our font over $00-$3f and $41-$5a (art/font.py)
-;   $cc00-$cfff  charset $80-$ff: the cats, the stage, the CH_* glyphs
+;   $cc00-$cfff  charset $80-$ff: the stage front, the CH_* glyphs (rows
+;                12 on, the title's)
 ;   $d800-$dbe7  colour RAM
-;   $dd00 = %xxxxxx00, $d018 = $02, $d016 = $08 (hi-res), $0288 = $c0
+;   $e000-$eeff  the stage, rows 0-11: a multicolour bitmap (build/stage.bin,
+;                the program file's last part, copied here at start:
+;                catsynth.asm stage_data);
+;                its colours in the screen's rows 0-11 and their colour RAM
+;   rows 0-11: $d011 = $3b, $d016 = $18, $d018 = $08 (bitmap $e000);
+;   the rest: text, $d011 = $1b, $d016 = $08 (the split: ui.asm, title.asm)
+;   $dd00 = %xxxxxx00, $0288 = $c0
 ;   all 8 sprites: $d000-$d010, $d015, $d017, $d01b-$d01d, $d025-$d02e
 ;
 ; Zero page: $f0-$f6, scratch only, inside screen_init and screen_frame
@@ -63,8 +71,8 @@
 ;                 from an IRQ.
 ;   screen_frame  once a frame: all 8 sprites from the poses (~330 cycles),
 ;                 the fading lights (~190 each, while one fades), then at
-;                 most one cat whose characters changed (round robin; only
-;                 the singer's do, its top 3 rows, ~1050). Worst case
+;                 most one cat whose frame changed (round robin; only the
+;                 singer's do, 4 bitmap cells, ~550). Worst case
 ;                 measured by screentest: see the status row there.
 ;                 Changes A, X, Y.
 ;
@@ -116,14 +124,17 @@
 SCR_SCREEN  = $c000
 SCR_CHARSET = $c800
 SCR_COLRAM  = $d800
+SCR_BITMAP  = $e000
+D018_TOP    = $08               ; screen $c000, the bitmap $e000 (rows 0-11)
+D018_TEXT   = $02               ; screen $c000, charset $c800 (the title's rows 12 on)
 
 scr_fp  = $f0                   ; frame data / RLE source
 scr_sp  = $f2                   ; screen / RLE destination
-scr_cp  = $f4                   ; colour RAM, 8 bytes back (see scr_cat)
+scr_cp  = $f4                   ; a cell's screen byte, then colour RAM (scr_cat)
 scr_n   = $f6
 
 screen_init
-        lda #$0b                ; blank while it is drawn
+        lda #$2b                ; blank while it is drawn (bitmap: the top's mode)
         sta $d011
         lda #0
         sta $d015
@@ -133,10 +144,10 @@ screen_init
         lda $dd00
         and #$fc                ; %00: bank 3
         sta $dd00
-        lda #((SCR_SCREEN & $3c00) >> 6) | ((SCR_CHARSET & $3800) >> 10)
-        sta $d018               ; screen (bits 4-7), charset (bits 1-3) in the bank
-        lda #$08
-        sta $d016               ; 40 columns, no multicolour, no fine scroll
+        lda #D018_TOP
+        sta $d018               ; screen (bits 4-7), the bitmap (bit 3) in the bank
+        lda #$18
+        sta $d016               ; 40 columns, multicolour, no fine scroll
         lda #SCR_WALL_BG
         sta $d020
         sta $d021
@@ -205,13 +216,13 @@ SCR_SPRLEN = SCR_NBLOCKS * 64   ; the sprites: exactly, the rest stays free
         ldy #>SCR_COLRAM
         jsr scr_unrle
 
-        ldx #2                  ; the cats idle (drawn in the map), lights off
--       lda #0
+        ldx #2                  ; the cats idle (the bitmap's cells as at
+-       lda #0                  ; load: the title may have left a pose), lights off
         sta scr_req,x
         sta scr_light,x
-        ldy scr_snp,x           ; (cat*SCR_NPOSE: pose 0's character frame)
+        ldy scr_snp,x           ; (cat*SCR_NPOSE: pose 0's frame)
         lda scr_cfr,y
-        sta scr_shown,x
+        jsr scr_cat
         dex
         bpl -
         stx scr_rr              ; ($ff: cat 0 is looked at first)
@@ -240,9 +251,9 @@ SCR_SPRLEN = SCR_NBLOCKS * 64   ; the sprites: exactly, the rest stays free
         jsr scr_spr
         lda #$ff
         sta $d015               ; all 8 on
-        lda #$1b                ; screen on: 25 rows, text, Y scroll 3
-        sta $d011
-        rts
+        rts                     ; (still blank: the split's bottom half turns it
+                                ; on, ui.asm irq_bottom / title.asm, with the
+                                ; top's mode, $d011 = $3b)
 
 ; X = cat, A = pose: the request; screen_frame shows it
 cat_pose
@@ -351,54 +362,56 @@ screen_frame
 +       stx scr_rr
         ; fall through
 
-; draw cat X's character frame A, the rows its frames differ in; keeps X
+; draw cat X's frame A: the bitmap cells its frames change (8 bitmap
+; bytes, the screen byte, colour RAM each; ~130 cycles a cell); keeps X
 scr_cat sta scr_shown,x
         tay
         lda scr_frlo,y
         sta scr_fp
         lda scr_frhi,y
         sta scr_fp+1
-        lda scr_boxlo,x
-        sta scr_sp
-        lda scr_boxhi,x
-        sta scr_sp+1
-        lda scr_cboxlo,x
-        sta scr_cp
-        lda scr_cboxhi,x
-        sta scr_cp+1
-        lda scr_rows,x          ; (the rows its frames differ in)
+        lda scr_ncell,x
+        beq scrc9
         sta scr_n
-scrrow  ldy #15                ; a row: 8 colours at 8-15, through scr_cp
--       lda (scr_fp),y          ; (8 bytes back) so one index serves both
-        sta (scr_cp),y
-        dey
-        cpy #8
-        bcs -
--       lda (scr_fp),y          ; then the 8 codes
+        lda scr_cell0,x
+        sta scr_k
+scrcell ldy scr_k
+        lda scr_cbl,y           ; the cell in the bitmap
+        sta scr_sp
+        lda scr_cbh,y
+        sta scr_sp+1
+        lda scr_csl,y           ; its screen byte
+        sta scr_cp
+        lda scr_csh,y
+        sta scr_cp+1
+        ldy #7
+-       lda (scr_fp),y
         sta (scr_sp),y
         dey
         bpl -
-        lda scr_fp              ; the next row: 16 bytes of frame, 40 of screen
+        ldy #8
+        lda (scr_fp),y
+        ldy #0
+        sta (scr_cp),y
+        lda scr_cp+1            ; colour RAM: the same offset
         clc
-        adc #16
+        adc #>(SCR_COLRAM - SCR_SCREEN)
+        sta scr_cp+1
+        ldy #9
+        lda (scr_fp),y
+        ldy #0
+        sta (scr_cp),y
+        lda scr_fp
+        clc
+        adc #10
         sta scr_fp
         bcc +
         inc scr_fp+1
-        clc
-+       lda scr_sp
-        adc #40
-        sta scr_sp
-        bcc +
-        inc scr_sp+1
-        clc
-+       lda scr_cp
-        adc #40
-        sta scr_cp
-        bcc +
-        inc scr_cp+1
-+       dec scr_n
-        bne scrrow
-        rts
++       inc scr_k
+        dec scr_n
+        bne scrcell
+scrc9   rts
+scr_k   .byte 0
 
 ; every sprite: the block and colour of its cat's pose (about 330 cycles)
 scr_spr ldx #7
@@ -443,12 +456,6 @@ scrrun  lda (scr_fp),y          ; (Y = 0 here)
         bne scrrun              ; (always)
 scrrts  rts
 
-; each cat's box (top left), drum/bass/singer: screen and colour RAM (8 back)
-SCR_BOX  = SCR_CAT_ROW * 40 + [SCR_CAT_COL_DRUM, SCR_CAT_COL_BASS, SCR_CAT_COL_SING]
-scr_boxlo  .byte <(SCR_SCREEN + SCR_BOX)
-scr_boxhi  .byte >(SCR_SCREEN + SCR_BOX)
-scr_cboxlo .byte <(SCR_COLRAM - 8 + SCR_BOX)
-scr_cboxhi .byte >(SCR_COLRAM - 8 + SCR_BOX)
 ; a grid's first cell, drum/bass/singer: screen and colour RAM
 SCR_GRID = [GRID_ROW_DRUM, GRID_ROW_BASS, GRID_ROW_SING] * 40 + GRID_COL
 scr_gridlo  .byte <(SCR_SCREEN + SCR_GRID)

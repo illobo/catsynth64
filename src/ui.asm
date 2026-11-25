@@ -16,10 +16,10 @@
 ;   row 24     style, mode, bars A-D (the one edited cyan), the chain
 ;              (the bar playing yellow); RUN/STOP: the help card
 ;
-; The stage (rows 0-11) keeps screen.asm's charset ($c800); a raster
-; interrupt at line 146 (row 11's last line) switches to the UI font at
-; $e000 (RAM under the KERNAL: in bank 3 the VIC sees RAM there) and one at
-; line 252 switches back. The same two interrupts lend sprite 7 (the mic)
+; The stage (rows 0-11) is screen.asm's multicolour bitmap ($e000); a
+; raster interrupt at line 146 (row 11's last line) switches to text in
+; the UI font at $f000 (RAM under the KERNAL: in bank 3 the VIC sees RAM
+; there) and one at line 252 switches back. The same two interrupts lend sprite 7 (the mic)
 ; to the mouse pointer below the stage. The main loop still polls line $fa.
 ;
 ; Mouse: a 1351 (the C64 Ultimate's USB mouse) in port 1. Its buttons sit on
@@ -33,9 +33,9 @@
 ; Keys: RETURN = left, SHIFT+RETURN = right, C= the next cat, CRSR moves.
 ; Test hook: ui_fake (mouse_fake), for c64bridge, which has no mouse.
 
-UI_CHARSET  = $e000
-D018_STAGE  = $02           ; screen $c000, charset $c800
-D018_UI     = $08           ; screen $c000, charset $e000
+UI_CHARSET  = $f000
+D018_STAGE  = D018_TOP      ; screen $c000, the stage's bitmap $e000
+D018_UI     = $0c           ; screen $c000, charset $f000
 SPLIT_LINE  = 146           ; the last line of row 11
 BOTTOM_LINE = 252           ; the first line of the lower border
 PTR_BLOCK   = $1f           ; sprite block $1f ($c7c0): the pointer
@@ -114,7 +114,7 @@ C_LGR = 15
 ; after screen_init: the font, the pointer, the panel, the interrupts
 ui_init
         sei
-        lda #<uifont            ; 2K of font to $e000 (writes go to the RAM)
+        lda #<uifont            ; 2K of font to $f000 (writes go to the RAM)
         sta gp
         lda #>uifont
         sta gp+1
@@ -134,7 +134,7 @@ ui_init
         bne -
         ldx #NCUSTG-1           ; our own glyphs over unused ones of the font:
 -       lda custgc,x            ; the floppy (4 x 4) and the panel's disk icon
-        sta gp                  ; gp = code * 8 + $e000: its glyph
+        sta gp                  ; gp = code * 8 + $f000: its glyph
         lda #0
         sta gp+1
         .rept 3
@@ -222,16 +222,23 @@ ui_irqoff
         sta $d018
         rts
 
-; line 146: the charset changes after the line's last character (cycle 56
-; on). We get here 36-45 cycles into the line (the KERNAL's $ff48 entry
-; included); the write lands 22 later: cycles 58-67 (67 = line 147's 4th,
-; before the badline's character fetches)
+; line 146: text and the UI font after the line's last character (cycle
+; 56 on). We get here 36-45 cycles into the line (the KERNAL's $ff48 entry
+; included); the three writes land 22, 26 and 30 later: cycles 58-75 (75 =
+; line 147's 12th, before the badline's fetches and its first pixel)
 irq_split
-        ldx #3                  ; (the delay: lands the $d018 write)
--       dex
-        bne -
         lda #D018_UI
+        ldx #$1b                ; text, 25 rows, Y scroll 3
+        ldy #$08                ; hi-res, 40 columns
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
         sta $d018
+        stx $d011
+        sty $d016
         lda mseen               ; the pointer: sprite 7 below the stage
         beq irql9
         lda SCR_SCREEN + $3ff   ; sprite 7's pointer (the mic's), kept
@@ -279,10 +286,14 @@ irql9   lda #<irq_bottom
         sta $d019
         jmp $ea81               ; the KERNAL's exit: registers back, RTI
 
-; line 252: the stage's charset and sprite 7 back for the next frame
+; line 252: the stage's bitmap and sprite 7 back for the next frame
 irq_bottom
         lda #D018_STAGE
         sta $d018
+        lda #$3b                ; bitmap, screen on (screen_init leaves it off)
+        sta $d011
+        lda #$18                ; multicolour
+        sta $d016
         lda s7lent
         beq +
         lda #0

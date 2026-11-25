@@ -23,9 +23,13 @@
 ;                 be off.
 ;   title_quit    title_tick may set it non-zero to end the title as a key
 ;                 would (e.g. a timeout into a demo); title_run clears it.
+;   title_busy    title_tick sets it non-zero after a big job (a new song):
+;                 that frame keeps its bars and leaves the page wipe for
+;                 the next, so the work ends in time.
 ;   title_endline the raster line (low byte) where the last frame's work
-;                 ended, worst so far; the bars start at line T_BAR_TOP-4
-;                 = 164, so it must stay below that (titletest shows it).
+;                 ended, worst so far; the stage's bitmap gives way to text
+;                 at line 146 (T_TEXT_LINE, polled), so it must stay below
+;                 that (titletest shows it).
 ;
 ; Frame: lines 164-234 the bars (the CPU is busy: ~4500 cycles), line 250
 ; title_tick, screen_frame (~2000), then the next frame's bars built
@@ -92,10 +96,22 @@ title_run
         lda #>T_PAGE0
         sta ttime+1
         jsr tbuild
-        lda #$1b
+        lda #$3b                ; on: the stage's bitmap at the top
         sta $d011
 
-tloop   lda #T_BAR_END-T_BAR_TOP+1-T_NBAD   ; the lines without the bad ones
+tloop   ldx #T_TEXT_LINE        ; the stage's bitmap ends: text from row 12,
+-       cpx $d012               ; the three writes in the right border of
+        bne -                   ; its last line (no sprites, not a bad line)
+        ldy #6                  ; 46 cycles, then 6: they land at 58-72
+        jsr tdly
+        bit t_tmp
+        lda #D018_TEXT
+        ldx #$1b
+        ldy #$08
+        sta $d018
+        stx $d011
+        sty $d016
+        lda #T_BAR_END-T_BAR_TOP+1-T_NBAD   ; the lines without the bad ones
         sta t_cnt
         jsr tbars
         ldx #T_SPLIT            ; the scroller's row: its fine scroll, 38
@@ -105,29 +121,39 @@ tloop   lda #T_BAR_END-T_BAR_TOP+1-T_NBAD   ; the lines without the bad ones
         jsr tdly
         lda t_sx
         sta $d016
-        ldx #T_SPLIT+9          ; and back under it, in the lower border
--       cpx $d012
+        ldx #T_SPLIT+9          ; and back under it, in the lower border: the
+-       cpx $d012               ; stage's bitmap for the next frame's top
         bne -
-        lda #$08
+        lda #$18
         sta $d016
+        lda #$3b
+        sta $d011
+        lda #D018_TOP
+        sta $d018
         jsr title_tick          ; (one line after $fa, as the main loop)
-        jsr screen_frame
         inc tframe
+        lda title_busy          ; title_tick did something big (a new style:
+        beq +                   ; ~6000 cycles): the band, the bars and the
+        lda #0                  ; wipe as they are for a frame, so the work
+        sta title_busy          ; still ends before line 146
+        beq tquick
++       jsr screen_frame
         jsr tbuild              ; the next frame's bars
         jsr tpages
-        jsr tscroll
+tquick  jsr tscroll
         jsr tkeys
         lda title_quit          ; (title_tick may end it too)
         beq +
         sec                     ; C = 1: done (tkeys' C, or this)
 +       php                     ; (C kept over the line check)
-        lda $d012               ; how far the work got (bars at 164)
+        lda $d012               ; how far the work got (the split at 146)
         cmp title_endline
         bcc +
         sta title_endline
 +       plp
-        bcc tloop
-        lda #$0b                ; done: blank, the main screen next
+        bcs +
+        jmp tloop
++       lda #$0b                ; done: blank, the main screen next
         sta $d011
         lda #$08
         sta $d016
@@ -254,6 +280,7 @@ tdsthi  .byte >(SCR_SCREEN + T_PAGE_TOP*40 + TROWS)
 ; scroll runs out the row moves a character and the next one comes in;
 ; the colours run through twave across the row (~1000 cycles at most).
 T_SPLIT  = 51 + T_PROMPT_ROW*8 - 1   ; 242: the line before the row
+T_TEXT_LINE = 51 + 12*8 - 1     ; 146: the bitmap's last line (rows 0-11)
 tscroll dec t_sx
         bpl tswave
         lda #7
@@ -346,6 +373,7 @@ ttime   .word 0                 ; frames left on this page
 tstate  .byte 0                 ; the keys: see tkeys
 tframe  .byte 0
 title_endline .byte 0
+title_busy .byte 0
 title_quit .byte 0
 
 ;------------------------------------------------------------------- bars

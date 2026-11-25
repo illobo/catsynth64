@@ -1,7 +1,7 @@
 ========================================================================
                      C A T S Y N T H   6 4
                          USER'S GUIDE
-              version 1.2, (c) 2026 illobo/netmilk
+              version 1.2.2, (c) 2026 illobo/netmilk
 ========================================================================
 
 CONTENTS
@@ -107,10 +107,11 @@ THE JOYSTICK
 The joystick in port 2 works exactly like the mouse: it moves the same
 pointer. Push it and the pointer moves, slowly at first and faster the
 longer you hold it. Over the matrix it jumps a whole cell for each push
-(and on, a cell at a time, while you hold it), so you can't miss one. FIRE is the left mouse button: the click happens
-when you let go. Hold FIRE for half a second and it is the right
-button. Everything this guide says about clicks works with the
-joystick, too. While you hold the joystick, the keyboard is not read.
+(and on, a cell at a time, while you hold it), so you can't miss one.
+FIRE is the left mouse button: the click happens when you let go. Hold
+FIRE for half a second and it is the right button. Everything this
+guide says about clicks works with the joystick, too. While you hold
+the joystick, the keyboard is not read.
 
 A SECOND SID
 
@@ -297,8 +298,9 @@ the song, so the bass cat cannot play a wrong note.
 
 A long note shows as a block followed by a bar for as long as it holds,
 from 1 to 4 steps. K changes the length too, and G makes a note slide
-or stop sliding. Q and A move the note under the cursor up and down the
-scale.
+or stop sliding. A slide that comes while the note before it still
+sounds glides on from that note, without a new attack, like a 303. Q
+and A move the note under the cursor up and down the scale.
 
 The matrix shows seven notes at a time. To reach higher or lower
 notes, move the cursor past the top or the bottom row with CRSR, or
@@ -460,9 +462,10 @@ and its scale, and the style's harmony. Your bars, the chain, the
 tempo and the settings pages stay as they are. The meows fit
 themselves to the new scale, and the bass line moves to the new key,
 each of its notes that is off the new scale moved to the nearest one
-in it, so the song keeps its shape in a new dress. While the band plays, this too waits for the end of the bar
-("New sounds at the next bar"); press the open slot's number to call
-it off ("Switch called off").
+in it, so the song keeps its shape in a new dress. While the band
+plays, this too waits for the end of the bar ("New sounds at the next
+bar"); press the open slot's number to call it off ("Switch called
+off").
 
 THE STYLE LIST. Right-click the name at the bottom left, and the
 style list covers the matrix: the ten styles in two columns, from
@@ -618,9 +621,9 @@ THE DRUMS PAGE
 On the right is one box:
 
   [ ] BEAT PULSE  off at first. Tick it and every kick, boom, snare,
-                  bap, clap and drop lights the screen's border for a moment
-                  in that sound's colour on the matrix, then it fades
-                  back. It is not saved with the songs.
+                  bap, clap and drop lights the screen's border for a
+                  moment in that sound's colour on the matrix, then it
+                  fades back. It is not saved with the songs.
 
 The drums have no Level. A drum hit is nearly all attack, and the
 softer held note that turns the other cats down does next to nothing
@@ -1335,16 +1338,20 @@ APPENDIX E   FOR THE TECHNICALLY MINDED
   * NTSC machines play at PAL speed (one frame in six is skipped).
   * The tempo is kept in frames per step; the panel shows 750 divided
     by it, in beats per minute (50 frames a second, 4 steps a beat).
+  * The stage (character rows 0-11) is a multicolour bitmap, the rest
+    of the screen text. The stage lights are colour RAM only: the lit
+    pixels are the bitmap's fourth colour.
   * The main loop is polled, on raster line 250. Two raster interrupts
     split the screen: at line 146 (the last line of character row 11,
-    the write landing at cycles 58-67, before row 12's badline) the
-    panel's character set comes in, and at line 252 the stage's goes
-    back. Both are switched off while the drive works. RESTORE does
-    nothing.
+    the writes landing at cycles 58-75, before row 12's badline) text
+    and the panel's character set come in, and at line 252 the stage's
+    bitmap goes back. Both are switched off while the drive works.
+    RESTORE does nothing.
   * BASIC's ROM is switched out, so the program may run up to $BFFF.
     The KERNAL stays in for the disk and the interrupts.
-  * The panel's font lives at $E000, in the RAM under the KERNAL ROM:
-    in bank 3 the VIC sees the RAM there, the CPU writes through.
+  * The stage's bitmap lives at $E000 and the panel's font at $F000,
+    in the RAM under the KERNAL ROM: in bank 3 the VIC sees the RAM
+    there, the CPU writes through.
   * All eight sprites belong to the band. Below the stage the same two
     interrupts lend sprite 7 (the singer's microphone) to the mouse
     pointer and give it back for the next frame.
