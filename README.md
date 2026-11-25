@@ -9,7 +9,7 @@ drums, Paw McCatney on bass and Mick Jaguar, who sings in meows.
 **[Website](https://illobo.github.io/catsynth64/)** ·
 **[Tutorial](https://illobo.github.io/catsynth64/tutorial.html)** ·
 **[Manual](https://illobo.github.io/catsynth64/manual.html)** ·
-**[Download the disk](https://illobo.github.io/catsynth64/download/catsynth64-1.2.4.d64)**
+**[Download the disk](https://illobo.github.io/catsynth64/download/catsynth64-1.2.5.d64)**
 
 - Ten styles, from dancehall and dub to acid, disco and Neko Trap, each with
   its own kit, bass sound, scale and four-bar song.
@@ -25,13 +25,14 @@ drums, Paw McCatney on bass and Mick Jaguar, who sings in meows.
 - A second SID (at $D420) adds dub echoes, a harmony singer and a bass delay
   with a resonant dub filter.
 - Live pads and a looper; a disk page with a directory, load, save and
-  delete; ten techno songs on the disk.
+  delete; ten techno songs and nine classics (Fur Elise, Ode to Joy,
+  Swan Lake...) on the disk.
 - The disk starts by itself (`LOAD"*",8,1`); on a 1541 its own fast loader,
   CatBoot, loads it about four times faster and stays in the drive, so songs
   load while the band plays on.
 
 Runs on a PAL Commodore 64, a C64 Ultimate / Ultimate 64 and in VICE
-(x64sc). Version 1.2.4, 2026.
+(x64sc). Version 1.2.5, 2026.
 
 ## Building
 
@@ -57,7 +58,7 @@ Or without make: `64tass -C -a src/catsynth.asm -o catsynth.prg`.
                 edition), and the UI font
     docs/       the website (GitHub Pages): the tutorial, the manual, the
                 browser version and the downloads (the disk, with ten
-                techno songs, and the program)
+                techno songs and nine classics, and the program)
 
 ## Credits
 

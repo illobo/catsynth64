@@ -1,7 +1,7 @@
 ========================================================================
                      C A T S Y N T H   6 4
                          USER'S GUIDE
-              version 1.2.4, (c) 2026 illobo/netmilk
+              version 1.2.5, (c) 2026 illobo/netmilk
 ========================================================================
 
 CONTENTS
@@ -891,6 +891,28 @@ with its own bars, tempo, chain and settings: look at its settings
 pages to see how it is made, or give it another style's sounds with
 SHIFT and a number key. BERLIN BASEMENT and DUB TECHNO NAP have a bass
 delay, which needs a second SID: without one they play without it.
+
+NINE CLASSICS
+
+The disk also holds nine classical tunes the way the band plays them:
+famous melodies, long out of copyright, on the styles' drums and bass.
+They load like the techno songs.
+
+  FUR ELISE         Beethoven, half-time; the bass cat plays the tune
+  FIFTH SYMPHONY    Beethoven: ta-ta-ta-taaa on a four-on-the-floor
+  MORNING MOOD      Grieg's sunrise as a reggae morning
+  MOUNTAIN KING     Grieg: the bass creeps up through the meows' filter
+  NEW WORLD LARGO   Dvorak's slow tune as an echoing dub
+  NIGHT MUSIC       Mozart's Eine kleine Nachtmusik, at a gallop
+  ODE TO JOY        Beethoven's Ninth, sung by the cats
+  PACHELBEL CANON   the ground bass, then the famous run
+  SWAN LAKE         Tchaikovsky's theme as long oohs
+
+Some tunes have notes that no scale of the singer has (Fur Elise's
+D sharp, for one). Then the bass cat plays the tune, as the bass can
+play any note, and the cats sing the chords. Look at a classic's mode
+on the bottom line: ODE TO JOY is the Bossa sounds in major, FIFTH
+SYMPHONY the Disco sounds in minor.
 
 
 ------------------------------------------------------------------------
