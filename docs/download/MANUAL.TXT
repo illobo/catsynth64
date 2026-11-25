@@ -1,7 +1,7 @@
 ========================================================================
                      C A T S Y N T H   6 4
                          USER'S GUIDE
-              version 1.2.5, (c) 2026 illobo/netmilk
+              version 1.2.6, (c) 2026 illobo/netmilk
 ========================================================================
 
 CONTENTS
@@ -892,11 +892,11 @@ pages to see how it is made, or give it another style's sounds with
 SHIFT and a number key. BERLIN BASEMENT and DUB TECHNO NAP have a bass
 delay, which needs a second SID: without one they play without it.
 
-NINE CLASSICS
+FOURTEEN CLASSICS
 
-The disk also holds nine classical tunes the way the band plays them:
-famous melodies, long out of copyright, on the styles' drums and bass.
-They load like the techno songs.
+The disk also holds fourteen classical tunes the way the band plays
+them: famous melodies, long out of copyright, on the styles' drums and
+bass. They load like the techno songs.
 
   FUR ELISE         Beethoven, half-time; the bass cat plays the tune
   FIFTH SYMPHONY    Beethoven: ta-ta-ta-taaa on a four-on-the-floor
@@ -907,6 +907,15 @@ They load like the techno songs.
   ODE TO JOY        Beethoven's Ninth, sung by the cats
   PACHELBEL CANON   the ground bass, then the famous run
   SWAN LAKE         Tchaikovsky's theme as long oohs
+
+Five of them are played as rock: a backbeat, the bass a saw wave like a
+fuzzy guitar (its Wave setting), thin buzzy meows on the lead (Tone).
+
+  ALLA TURCA ROCK   Mozart's turns on the bass, the cats on the chords
+  BUMBLEBEE ROCK    Rimsky-Korsakov's buzzing run, the cats as bees
+  DIES IRAE         the old chant as slow doom
+  TOCCATA ROCK      Bach's famous fall on the bass
+  VALKYRIES ROCK    Wagner's horn call, sung over pumping eighths
 
 Some tunes have notes that no scale of the singer has (Fur Elise's
 D sharp, for one). Then the bass cat plays the tune, as the bass can

@@ -378,13 +378,19 @@ wc2own  sta cutoff2
 wc2no   rts
 
 ; the vowel's filter mode (mfm, pitch.asm: $10 low-pass, $20 band-pass)
-; into voice X's SID, at full volume; SID 2's only while voice
+; into voice X's SID (SID 1's stays low-pass with Meowize on), at full volume; SID 2's only while voice
 ; X owns its filter (wcut2); uses Y
 wmode   lda mfm
         ora #$0f
         cpx #3
         bcs +
-        sta $d418
+        tay
+        lda tflags              ; Meowize: the bass is in SID 1's filter too,
+        lsr a                   ; and a band-pass would take its low end:
+        tya                     ; low-pass then (the vowel's cutoff stays)
+        bcc wmode1
+        lda #$1f
+wmode1  sta $d418
         rts
 +       cpx cut2own
         bne +
