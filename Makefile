@@ -19,7 +19,19 @@ build/catsynth-web.prg: $(wildcard src/*.asm) $(wildcard gen/*)
 packed: build/catsynth.prg
 	exomizer sfx sys -x1 -q -o build/catsynth64.prg build/catsynth.prg
 
-clean:
-	rm -f build/catsynth.prg build/catsynth64.prg build/catsynth.lbl build/catsynth.lst
+# the release disk's boot: CATSYNTH64 (build/autoboot.prg: LOAD"*",8,1
+# starts it) loads CATBOOT (build/catboot.prg, the 1541 fast loader: set
+# CB_SYS to the packed program's SYS), which loads CATSYNTH64 MAIN (the
+# packed program) and starts it
+catboot: build/catboot.prg build/autoboot.prg
+build/catboot.prg: src/catboot.asm
+	mkdir -p build
+	64tass -C -a src/catboot.asm -o $@
+build/autoboot.prg: src/autoboot.asm
+	mkdir -p build
+	64tass -C -a src/autoboot.asm -o $@
 
-.PHONY: all web packed clean
+clean:
+	rm -f build/catsynth.prg build/catsynth64.prg build/catsynth.lbl build/catsynth.lst build/catboot.prg build/autoboot.prg
+
+.PHONY: all web packed catboot clean

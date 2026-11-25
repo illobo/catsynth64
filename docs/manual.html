@@ -115,7 +115,7 @@ footer { max-width: 1060px; margin: 48px auto 0; color: var(--ink-soft); font-si
 <nav class="top" aria-label="Site"><a href="index.html">Home</a><a href="tutorial.html">Tutorial</a><a href="manual.html" class="on">Manual</a><a href="play/">Play</a><a href="index.html#get">Download</a></nav>
 <header class="cover">
   <div>
-    <div class="kicker">User's Guide &middot; v1.2.2 &middot; 2026</div>
+    <div class="kicker">User's Guide &middot; v1.2.3 &middot; 2026</div>
     <h1>CatSynth 64<b>A toy synthesizer with a band of three cats</b></h1>
     <p>For the Commodore 64 (PAL), the C64 Ultimate and the Ultimate 64. Program and guide by illobo/netmilk. Also as plain text: <a href="download/MANUAL.TXT">MANUAL.TXT</a>.</p>
   </div>
@@ -134,12 +134,12 @@ footer { max-width: 1060px; margin: 48px auto 0; color: var(--ink-soft); font-si
 <ul class="plain"><li>A Commodore 64 (PAL), a C64 Ultimate or an Ultimate 64</li><li>A disk drive as device 8 with the CatSynth 64 disk</li><li>A TV or monitor with sound turned up</li><li>A mouse in port 1 (you can play without one): a 1351, or on the C64 Ultimate a USB mouse, which the Ultimate turns into a 1351</li><li>A joystick in port 2 (you can play without one, too)</li><li>A blank disk if you want to save songs</li><li>A second SID chip, if you have one (see below): the band sounds bigger with it, and everything also works without</li></ul>
 <h3 id="loading-the-program">Loading the program</h3>
 <p>Switch on the computer and the drive, put the disk in the drive and type:</p>
-<div class="screen">LOAD&quot;CATSYNTH64&quot;,8,1</div>
-<p>and press <kbd>RETURN</kbd>. The screen shows:</p>
-<div class="screen">SEARCHING FOR CATSYNTH64
+<div class="screen">LOAD&quot;*&quot;,8,1</div>
+<p>and press <kbd>RETURN</kbd> (LOAD"CATSYNTH64",8,1 is the same). The screen shows:</p>
+<div class="screen">SEARCHING FOR *
 LOADING
 READY.</div>
-<p>Now type RUN and press <kbd>RETURN</kbd>. The border flashes for a moment while the program unpacks itself, then the title screen appears and the band starts to play.</p>
+<p>and it starts by itself: no need to type RUN (LOAD"CATSYNTH64",8 and RUN work too). CATSYNTH64 loads CatBoot, a small fast loader: with a 1541, JiffyDOS or not, the program, CATSYNTH64 MAIN, comes in at about four times the usual speed (some 15 seconds instead of a minute), and CatBoot stays in the drive afterwards, so the disk page can load songs and read the directory while the band plays on. Other drives, an SD2IEC and more than one drive on the cable load it the usual way (and then the music pauses while the drive works). Then the border flashes for a moment while the program unpacks itself, the title screen appears and the band starts to play.</p>
 <h3 id="the-title-screen">The title screen</h3>
 <p>The band plays on stage under the CatSynth 64 sign while a message scrolls along the bottom of the screen. Every so often the bottom half shows a card with the most important keys. If you leave the title screen alone, the band plays all ten styles in turn, each one through its song, so you can listen to them all. Press a number key to hear that style now.</p>
 <p>Press <kbd>FIRE</kbd>, <kbd>SPACE</kbd> or <kbd>RETURN</kbd> to go on stage. On stage the band plays on with the style you were listening to, in its own song slot (Chapter 4 tells you about the ten song slots); at first that is slot 1, the dancehall song. For three seconds the settings line reminds you: "<kbd>RUN/STOP</kbd>: help   <kbd>&lt;-</kbd>: live play".</p>
@@ -222,9 +222,13 @@ o     RECORD. Live play with recording switched on (Chapter 7).
 <p><kbd>SPACE</kbd> stops the band and starts it again from the top. The play button is a pause button: it stops the band where it is and goes on from there (<kbd>SHIFT</kbd>+<kbd>SPACE</kbd> does the same). The stop button always goes back to the top.</p>
 <div class="box try"><b>Try this</b><p>open the Drums tab and click along the "Swing" slider, or press <kbd>W</kbd> (<kbd>SHIFT</kbd>+<kbd>W</kbd> goes back). The off-beat steps come later and later, and the beat starts to roll. The swing stops where the short steps would get too short to play a note.</p></div>
 <h3 id="lesson-8-keep-it">Lesson 8: keep it</h3>
-<p>Your song lives in the computer's memory until you switch it off. To keep it, put it on the disk: press <kbd>S</kbd> for the disk page, type a name, and press <kbd>SHIFT+RETURN</kbd> (or click Save). "Saved" says it is on the disk. Next time, press <kbd>S</kbd>, click your song in the list and press <kbd>RETURN</kbd> (or click Load). Chapter 7 tells you more.</p>
+<p>Your song lives in the computer's memory until you switch it off. To keep it, put it on the disk: press <kbd>S</kbd> for the disk page, type a name, and press <kbd>SHIFT+RETURN</kbd> (or click Save). "Saved" says it is on the disk. Next time, press <kbd>S</kbd>, click your song in the list and press <kbd>RETURN</kbd> (or click Load). Chapter 8 tells you more.</p>
 <p>The browser version has no disk drive: there your song lasts as long as the page is open.</p>
-<p>That's it, your first song! In the next chapters you will make it longer, change its key and play it live.</p>
+<h3 id="lesson-9-play-it-live">Lesson 9: play it live</h3>
+<p>Press the left arrow key (top left of the keyboard): the letter keys become pads. <kbd>Q</kbd> to <kbd>P</kbd> play the drum cat's sounds, <kbd>A</kbd> to L the bass cat's notes, <kbd>Z</kbd> to / the singer's meows, low to high. Play along with the band.</p>
+<p>Now press <kbd>RETURN</kbd>: the record button blinks and whatever you play goes into the bar on the nearest step, so it loops round with the band. Add a clap on one pass, a meow on the next. <kbd>RETURN</kbd> again stops recording, and <kbd>DEL</kbd> takes back everything you recorded since you started. Press the left arrow key again to go back to editing.</p>
+<div class="box try"><b>Try this</b><p>in the funk song (press <kbd>7</kbd>) record <kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd> on the singer row on beats 2 and 4, then a few drum hits over it.</p></div>
+<p>That's it, your first song! In the next chapters you will make it longer, change its key and give each cat a voice of its own; Chapter 7 tells you all about live play and the looper.</p>
 </section>
 <section class="chapter" id="4-bars-and-songs">
 <div class="chap"><div class="num l4">4</div><div><div class="lbl">Chapter 4</div><h2>Bars and songs</h2></div></div>
@@ -317,7 +321,7 @@ o     RECORD. Live play with recording switched on (Chapter 7).
 <div class="chap"><div class="num l3">8</div><div><div class="lbl">Chapter 8</div><h2>The disk page: saving your songs</h2></div></div>
 <figure class="shot"><img src="img/disk.png" alt="The disk page: a floppy, the directory, the name and the buttons" width="768" height="544" loading="lazy"><figcaption>The disk page.</figcaption></figure>
 <p>Your songs go on a disk in drive 8, each under a name of your own. The disk page always works on the open song slot (Chapter 4): it loads into it and saves from it.</p>
-<p>TO OPEN THE DISK PAGE: press <kbd>S</kbd> or <kbd>L</kbd>, or click the small floppy disk at the right end of the frame under the matrix. The page covers the panel, and the band keeps playing while you look around. The drive reads the disk's directory at once, just like LOAD"$",8 would: "Reading..." shows for a moment, then the screen goes blank and the music pauses while the drive works, then the page shows</p>
+<p>TO OPEN THE DISK PAGE: press <kbd>S</kbd> or <kbd>L</kbd>, or click the small floppy disk at the right end of the frame under the matrix. The page covers the panel, and the band keeps playing while you look around. The drive reads the disk's directory at once, just like LOAD"$",8 would: "Reading..." shows for a moment (when CatBoot loaded the program, the band plays on; otherwise the screen goes blank and the music pauses while the drive works), then the page shows</p>
 <ul class="plain"><li>the disk's name and ID at the top,</li><li>its files, six at a time: the blocks each one takes, its "NAME" and its type (PRG for songs). When there are more, click the arrows at the right to scroll,</li><li>how many blocks are free,</li><li>the Name field: the name to load, save or delete,</li><li>a big 5 1/4" floppy at the left. Click it to read the directory again, for example after you change the disk.</li></ul>
 <p>CHOOSE A NAME: click a file (or move through the list with <kbd>CRSR</kbd> down and up) and it turns white with a &gt; in front; its name goes into the Name field. Or type a name: letters, digits, space, + - and . (up to 16 characters). <kbd>DEL</kbd> rubs out the last character.</p>
 <p>Then click a button on the line below the page, or press its key:</p>
@@ -486,7 +490,9 @@ the bottom line     a hint, what the drive is doing (Reading...,
 <p>On the disk page, messages appear on the page's bottom line:</p>
 <pre class="listing">Reading...           the drive reads the directory
 Loading... /         the drive is busy; the music pauses and the
-Saving... /          screen goes blank for a moment
+Saving... /          screen goes blank for a moment (loading with
+                     CatBoot: it plays on; a save hands the drive
+                     back to its DOS, so loads pause from then on)
 Deleting...
 Saved / Deleted      all went well
 Overwrite NAME?      a file of that name is on the disk: Yes (Y)
@@ -523,7 +529,7 @@ Disk error NN        any other trouble; NN is the drive&#x27;s or the
 <p>========================================================================</p>
 </section>
 <div class="end">HAVE FUN!</div></main></div>
-<footer>CatSynth 64 1.2.2 &middot; (c) 2026 illobo/netmilk &middot; MIT licence &middot;
+<footer>CatSynth 64 1.2.3 &middot; (c) 2026 illobo/netmilk &middot; WTFPL &middot;
 <a href="https://github.com/illobo/catsynth64">source on GitHub</a>. Screenshots taken on a C64 Ultimate. The browser version runs on
 <a href="https://github.com/floooh/chips">floooh's chips</a> C64 emulator.</footer>
 </body>

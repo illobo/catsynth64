@@ -45,7 +45,6 @@ cdark    = $21
 sp       = $66
 rofs     = $68
 sfxv     = $69
-sfxx     = $6a
 sfxy     = $6b
 cutoff   = $6c
 sidmodel = $6e
@@ -157,6 +156,9 @@ start   sei
         cld
         ldx #$ff
         txs
+        .if !WEB
+        jsr cd_init             ; CatBoot's drive code waiting? (catdrive.asm)
+        .fi
         lda #0
         ldx #$a0                ; our zero page ($a0-$db)
 -       sta $00,x
@@ -995,21 +997,6 @@ cell    lda cury
         tay
         rts
 
-; the cursor's step on / off (on: the value it had last, heard)
-toggle  jsr cell
-        lda (ep),y
-        beq +
-        ldx cury                ; on -> off, remembering it
-        sta lastv,x
-        lda #0
-        sta (ep),y
-        jmp moved
-+       ldx cury
-        lda lastv,x
-        sta (ep),y
-        jsr audition
-        jmp moved
-
 ; A = +1 / -1: the value of the step (switching it on if it was off)
 value   sta tmp
         jsr cell
@@ -1700,10 +1687,6 @@ notename
         rts
 
 
-fxvoice
-fxlo
-fxhi    .byte 0                 ; sfx_play is not used
-
         .include "sfx.asm"
         .include "pitch.asm"
         .include "seq.asm"
@@ -1716,6 +1699,9 @@ title_end
         .include "disk.asm"
         .include "ui.asm"
         .include "slots.asm"
+        .if !WEB
+        .include "catdrive.asm" ; (songs through CatBoot's drive code)
+        .fi
         .include "diskui.asm"   ; (last: its buffers follow it, not loaded)
 
 ; the song slots: over the title's code and pictures, which are done with

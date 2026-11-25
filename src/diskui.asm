@@ -23,8 +23,10 @@
 ;
 ; The directory: OPEN "$" on drive 8 (secondary 0) and CHRIN (the BASIC
 ; listing: load address, then per line link, blocks, text, 0), parsed by
-; dir_parse, which takes its bytes from dir_get: CHRIN, or a buffer
-; (dir_parsebuf, for tests). Up to DMAX files are kept.
+; dir_parse (or from memory: dir_parsebuf, for tools/edittest.py), each
+; line by dir_line; with CatBoot's drive code waiting,
+; catdrive.asm builds the same lines from the raw sectors. Up to DMAX
+; files are kept.
 ;
 ; Zero page: dp ($fb-$fc), dc ($fd-$fe), free in the main program (the
 ; disk code saves and restores all of it anyway).
@@ -431,13 +433,21 @@ dload   lda nlen
 dloadgo ldx #<dm_loading
         ldy #>dm_loading
         jsr dmsgw
-        jsr dio_begin
         jsr dname
+        .if !WEB
+        lda cd_on               ; CatBoot's drive code: the band plays on
+        beq dlkern
+        jsr cd_loadn
+        bcc dlok
+        ldx cd_on               ; (still on: the file came, not a song)
+        bne dlerr
+        .fi
+dlkern  jsr dio_begin           ; the KERNAL's way: the music paused
         jsr disk_loadn
         jsr dio_end
-        bcc +
-        jmp derror
-+       jsr disk_close          ; the song in the open slot, with the file's
+        bcc dlok
+dlerr   jmp derror
+dlok    jsr disk_close          ; the song in the open slot, with the file's
         jsr dslname             ; name, playing, the panel back
         jsr sclean              ; (as on the disk: no changes)
         lda #0
@@ -745,6 +755,9 @@ dfno    sec
 
 ; the music paused, the interrupts off around disk I/O (C and A kept after)
 dio_begin
+        .if !WEB
+        jsr cd_quit             ; (CatBoot's drive code: the DOS back first)
+        .fi
         jsr sfx_stop
         ldx dmsgdly             ; the message ("Loading..."), the panel as it
         beq +                   ; is: 15 frames to be read before the screen
@@ -784,10 +797,17 @@ dir_reload
         ldx #<dm_reading
         ldy #>dm_reading
         jsr dmsgw
+        .if !WEB
+        lda cd_on               ; CatBoot's drive code: the band plays on
+        beq +
+        jsr cd_dirread
+        bcc dirrd9              ; (failed: the drive is the DOS's again)
++
+        .fi
         jsr dio_begin
         jsr dir_read
         jsr dio_end
-        php
+dirrd9  php
         pha
         lda #0
         sta dtop
@@ -885,7 +905,8 @@ dch8    sta dperr
 dch9    sec
         rts
 
-; the test hook: dir_parse from memory, dsrc (dlen bytes; dir_bget)
+; the test hook (tools/edittest.py): dir_parse from memory, dsrc (dlen
+; bytes; dir_bget)
 dir_parsebuf
         lda #<dir_bget
         sta dir_get+1

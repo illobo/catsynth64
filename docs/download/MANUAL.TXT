@@ -1,7 +1,7 @@
 ========================================================================
                      C A T S Y N T H   6 4
                          USER'S GUIDE
-              version 1.2.2, (c) 2026 illobo/netmilk
+              version 1.2.3, (c) 2026 illobo/netmilk
 ========================================================================
 
 CONTENTS
@@ -65,17 +65,24 @@ LOADING THE PROGRAM
 Switch on the computer and the drive, put the disk in the drive and
 type:
 
-        LOAD"CATSYNTH64",8,1
+        LOAD"*",8,1
 
-and press RETURN. The screen shows:
+and press RETURN (LOAD"CATSYNTH64",8,1 is the same). The screen shows:
 
-        SEARCHING FOR CATSYNTH64
+        SEARCHING FOR *
         LOADING
         READY.
 
-Now type RUN and press RETURN. The border flashes for a moment while
-the program unpacks itself, then the title screen appears and the band
-starts to play.
+and it starts by itself: no need to type RUN (LOAD"CATSYNTH64",8 and
+RUN work too). CATSYNTH64 loads CatBoot, a small fast loader: with a
+1541, JiffyDOS or not, the program, CATSYNTH64 MAIN, comes in at about
+four times the usual speed (some 15 seconds instead of a minute), and
+CatBoot stays in the drive afterwards, so the disk page can load songs
+and read the directory while the band plays on. Other drives, an
+SD2IEC and more than one drive on the cable load it the usual way (and
+then the music pauses while the drive works). Then the border flashes
+for a moment while the program unpacks itself, the title screen
+appears and the band starts to play.
 
 THE TITLE SCREEN
 
@@ -371,13 +378,30 @@ Your song lives in the computer's memory until you switch it off. To
 keep it, put it on the disk: press S for the disk page, type a name,
 and press SHIFT+RETURN (or click Save). "Saved" says it is on the disk.
 Next time, press S, click your song in the list and press RETURN (or
-click Load). Chapter 7 tells you more.
+click Load). Chapter 8 tells you more.
 
 The browser version has no disk drive: there your song lasts as long
 as the page is open.
 
+LESSON 9: PLAY IT LIVE
+
+Press the left arrow key (top left of the keyboard): the letter keys
+become pads. Q to P play the drum cat's sounds, A to L the bass cat's
+notes, Z to / the singer's meows, low to high. Play along with the
+band.
+
+Now press RETURN: the record button blinks and whatever you play goes
+into the bar on the nearest step, so it loops round with the band. Add
+a clap on one pass, a meow on the next. RETURN again stops recording,
+and DEL takes back everything you recorded since you started. Press the
+left arrow key again to go back to editing.
+
+    TRY THIS: in the funk song (press 7) record Z X C on the singer
+    row on beats 2 and 4, then a few drum hits over it.
+
 That's it, your first song! In the next chapters you will make it
-longer, change its key and play it live.
+longer, change its key and give each cat a voice of its own; Chapter 7
+tells you all about live play and the looper.
 
 
 ------------------------------------------------------------------------
@@ -732,8 +756,9 @@ TO OPEN THE DISK PAGE: press S or L, or click the small floppy disk at
 the right end of the frame under the matrix. The page covers the
 panel, and the band keeps playing while you look around. The drive
 reads the disk's directory at once, just like LOAD"$",8 would:
-"Reading..." shows for a moment, then the screen goes blank and the
-music pauses while the drive works, then the page shows
+"Reading..." shows for a moment (when CatBoot loaded the program, the
+band plays on; otherwise the screen goes blank and the music pauses
+while the drive works), then the page shows
 
   * the disk's name and ID at the top,
   * its files, six at a time: the blocks each one takes, its "NAME"
@@ -1277,7 +1302,9 @@ On the disk page, messages appear on the page's bottom line:
 
   Reading...           the drive reads the directory
   Loading... /         the drive is busy; the music pauses and the
-  Saving... /          screen goes blank for a moment
+  Saving... /          screen goes blank for a moment (loading with
+                       CatBoot: it plays on; a save hands the drive
+                       back to its DOS, so loads pause from then on)
   Deleting...
   Saved / Deleted      all went well
   Overwrite NAME?      a file of that name is on the disk: Yes (Y)

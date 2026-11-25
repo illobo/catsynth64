@@ -40,33 +40,6 @@ SX_MF    = 18             ; w, cut: a meow frame (seq.asm's contour), waits a fr
 SX_MFV   = 19             ; w, cut, v: the same plus v (signed 1/16 semitones) vibrato
 SX_STOP  = 20             ; stop the script, gate untouched (a held note)
 
-; the hard restart, in a script: waveform and gate off, ADSR 0, a frame
-HRESTART .macro
-        .byte SX_CTRL, $00, SX_ADSR, $00, $00, SX_WAIT, 1
-        .endm
-
-; A = FX_xxx; keeps X and Y
-; (its script on its voice, fxvoice, from the next frame, the slides stopped)
-sfx_play
-        php
-        sei                     ; (the IRQ's sfx must not see it half set)
-        stx sfxx
-        sty sfxy
-        tay
-        ldx fxvoice,y           ; X = its voice
-        lda fxlo,y
-        sta sptrl,x
-        lda fxhi,y
-        sta sptrh,x
-        lda #0
-        sta swait,x
-        sta wslc,x
-        sta gslc,x
-        ldx sfxx
-        ldy sfxy
-        plp
-        rts
-
 ; once a frame (the bottom IRQ): each voice, nvoice down to 0, its glide,
 ; pulse width slide, then its script unless it waits; then the after-voices
 ; work (squelch, dubflt, scduck). Changes A, X, Y.
@@ -766,7 +739,7 @@ scduck  lda scdk
         sta $d402
         lda scr+1
         sta $d403
-sc9     rts                     ; (a label nothing uses)
+        rts
 scout   lda pwl
         sta $d402
         lda pwh

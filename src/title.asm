@@ -19,8 +19,10 @@
 ;                 must be released first), with the screen blanked
 ;                 ($d011 = $0b, sprites still on) and $dc00 = $ff: call
 ;                 screen_init next (it turns the VU meters back on: the
-;                 title sets screen_novu). Changes A, X, Y; interrupts must
-;                 be off.
+;                 title sets screen_novu). Changes A, X, Y. Call it with
+;                 interrupts off and the CIAs' interrupts disabled: it runs
+;                 its own raster interrupt (tirq, through $0314) and
+;                 returns with it off and interrupts disabled.
 ;   title_quit    title_tick may set it non-zero to end the title as a key
 ;                 would (e.g. a timeout into a demo); title_run clears it.
 ;   title_busy    title_tick sets it non-zero after a big job (a new song):
@@ -28,8 +30,9 @@
 ;                 the next, so the work ends in time.
 ;   title_endline the raster line (low byte) where the last frame's work
 ;                 ended, worst so far; the stage's bitmap gives way to text
-;                 at line 146 (T_TEXT_LINE, polled), so it must stay below
-;                 that (titletest shows it).
+;                 at line 146 (T_TEXT_LINE, a raster interrupt, tirq, so a
+;                 late frame still splits on time), and the bars start at
+;                 164: it must stay below that (titletest shows it).
 ;
 ; Frame: lines 164-234 the bars (the CPU is busy: ~4500 cycles), line 250
 ; title_tick, screen_frame (~2000), then the next frame's bars built
@@ -96,21 +99,26 @@ title_run
         lda #>T_PAGE0
         sta ttime+1
         jsr tbuild
-        lda #$3b                ; on: the stage's bitmap at the top
-        sta $d011
+        lda #<tirq              ; the split at line 146: a raster interrupt,
+        sta $0314               ; on time even when a frame's work runs late
+        lda #>tirq
+        sta $0315
+        lda #T_TEXT_LINE
+        sta $d012
+        lda #$3b                ; on: the stage's bitmap at the top (and the
+        sta $d011               ; raster compare's bit 8 off)
+        lda #1
+        sta $d01a
+        sta $d019
+        lda #0
+        sta tsplit
+        cli                     ; (interrupts on while the work runs)
 
-tloop   ldx #T_TEXT_LINE        ; the stage's bitmap ends: text from row 12,
--       cpx $d012               ; the three writes in the right border of
-        bne -                   ; its last line (no sprites, not a bad line)
-        ldy #6                  ; 46 cycles, then 6: they land at 58-72
-        jsr tdly
-        bit t_tmp
-        lda #D018_TEXT
-        ldx #$1b
-        ldy #$08
-        sta $d018
-        stx $d011
-        sty $d016
+tloop   lda tsplit              ; the split done this frame (now, or while
+        beq tloop               ; the work ran)
+        sei                     ; the bars on: cycle-exact, no interrupts
+        lda #0
+        sta tsplit
         lda #T_BAR_END-T_BAR_TOP+1-T_NBAD   ; the lines without the bad ones
         sta t_cnt
         jsr tbars
@@ -130,6 +138,7 @@ tloop   ldx #T_TEXT_LINE        ; the stage's bitmap ends: text from row 12,
         sta $d011
         lda #D018_TOP
         sta $d018
+        cli                     ; the work: the split may interrupt it
         jsr title_tick          ; (one line after $fa, as the main loop)
         inc tframe
         lda title_busy          ; title_tick did something big (a new style:
@@ -146,14 +155,19 @@ tquick  jsr tscroll
         beq +
         sec                     ; C = 1: done (tkeys' C, or this)
 +       php                     ; (C kept over the line check)
-        lda $d012               ; how far the work got (the split at 146)
+        lda $d012               ; how far the work got (the bars at 164)
         cmp title_endline
         bcc +
         sta title_endline
 +       plp
         bcs +
         jmp tloop
-+       lda #$0b                ; done: blank, the main screen next
++       sei                     ; done: the interrupt off, blank, the main
+        lda #0                  ; screen next
+        sta $d01a
+        lda #1
+        sta $d019
+        lda #$0b
         sta $d011
         lda #$08
         sta $d016
@@ -161,6 +175,27 @@ tquick  jsr tscroll
         sta $d020
         sta $d021
         rts
+
+; line 146: text and the stage's charset after the line's last character,
+; as ui.asm's irq_split (here 36-45 cycles in through the KERNAL's $ff48;
+; the writes land at cycles 58-75)
+tirq    lda #D018_TEXT
+        ldx #$1b
+        ldy #$08
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        sta $d018
+        stx $d011
+        sty $d016
+        lda #1
+        sta $d019
+        sta tsplit
+        jmp $ea81               ; the KERNAL's exit: registers back, RTI
+tsplit  .byte 0                 ; set by tirq, each frame
 
 ; fire (port 2), SPACE, RETURN: C = 1 once one was pressed and all are up
 tkeys   ldx #0
