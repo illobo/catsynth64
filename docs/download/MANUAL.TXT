@@ -1,7 +1,7 @@
 ========================================================================
                      C A T S Y N T H   6 4
                          USER'S GUIDE
-              version 1.2.3, (c) 2026 illobo/netmilk
+              version 1.2.4, (c) 2026 illobo/netmilk
 ========================================================================
 
 CONTENTS
@@ -607,9 +607,12 @@ settings:
           as wide as made. The meow always lands on its note, so it
           stays in key. If a swoop would leave the cat's range, the
           cat makes it a little smaller.
-  VOWEL   how wide the cat opens its mouth. At -8 a closed "mmm"; at
-          +8 three times as wide as made, a bright "aah".
-  TONE    the whole vowel darker (-8) or brighter (+8).
+  VOWEL   the vowel the cat sings. -8 a closed "uuh", about -4 an
+          "ooh", 0 the meow as made, then wider, and from +2 on an
+          "aah" that goes through "eh" to a thin "eeh" at +8. (The
+          bright vowels are a little quieter.)
+  TONE    the whole sound darker (-8: a hollow, muffled voice) or
+          brighter (+8: a thin, buzzy one).
 
 Each goes from -8 to +8, and 0 is the meow as the band made it. The
 echoes and the harmony singer follow the same settings.

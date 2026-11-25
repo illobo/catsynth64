@@ -209,51 +209,46 @@ vpos    clc
         adc pth,x
         sta pth,x
 +       jsr p2f
-        ldy #2                  ; the vowel: the cutoff, opened by Vowel
-        lda (sp),y              ; (12 + (cut - 12) * vowf / 8), moved by Tone
-        sta mfc                 ; ((tone - 8) * 6), darker for the echoes
-        ldy vslot,x
+        ldy #2                  ; the vowel: the cutoff cut, through Vowel
+        lda (sp),y              ; (seq.asm vbase + (cut - 12) * vsweep / 8,
+        sta mfc                 ; and its filter mode), * Tone (tonef / 8),
+        ldy vslot,x             ; darker for the echoes
         sty mfs
         lda cvow,y
-        cmp #8
-        beq mfv8                ; (8: as made)
         tay
-        lda vowf,y              ; (seq.asm: the factor in eighths, for scl8)
+        lda vmode,y
+        sta mfm
+        cpy #8
+        beq mfv8                ; (8: as made)
+        lda vsweep,y
         sta s4b
+        lda vbase,y
+        sta mft
         lda mfc
         sec
         sbc #12
-        bcc mfv8                ; (closed or below: as it is)
-        jsr scl8
+        bcs +
+        lda #0                  ; (closed or below: the base)
++       jsr scl8
         clc
-        adc #12
+        adc mft
         bcc +
         lda #255                ; (at most 255)
 +       sta mfc
 mfv8    ldy mfs                 ; Tone
         lda ctone,y
-        sec
-        sbc #8
+        cmp #8
         beq mfvt                ; (8: as made)
-        sta mft                 ; -8..+7, * 6
-        asl a
-        clc
-        adc mft
-        asl a                   ; (signed, -48..+42)
-        bmi mfdn
-        clc                     ; brighter: at most 255
-        adc mfc
-        bcc +
-        lda #255
-+       jmp mfvok
-mfdn    clc                     ; darker: at least 0
-        adc mfc
-        bcs mfvok               ; (no borrow: still >= 0)
-        lda #0
+        tay
+        lda tonef,y
+        sta s4b
+        lda mfc
+        jsr scl8
         jmp mfvok
 mfvt    lda mfc
 mfvok   jsr dark
         jsr wcut
+        jsr wmode
         lda madv                ; next command, and that's the frame
         clc
         adc sp
@@ -282,7 +277,8 @@ cvow    .byte 8, 8, 8       ; each contour slot's Vowel, Tone (cstore)
 ctone   .byte 8, 8, 8
 mfc     .byte 0             ; SX_MF: the cutoff being worked out
 mfs     .byte 0             ; ...the voice's contour slot
-mft     .byte 0             ; ...Tone - 8
+mft     .byte 0             ; ...the vowel's base
+mfm     .byte $10           ; ...its filter mode (wmode)
 
 ; A = slot: its contour from ctour into zero page; keeps X
 cfetch  sta cload

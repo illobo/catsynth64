@@ -9,7 +9,7 @@ drums, Paw McCatney on bass and Mick Jaguar, who sings in meows.
 **[Website](https://illobo.github.io/catsynth64/)** ·
 **[Tutorial](https://illobo.github.io/catsynth64/tutorial.html)** ·
 **[Manual](https://illobo.github.io/catsynth64/manual.html)** ·
-**[Download the disk](https://illobo.github.io/catsynth64/download/catsynth64-1.2.3.d64)**
+**[Download the disk](https://illobo.github.io/catsynth64/download/catsynth64-1.2.4.d64)**
 
 - Ten styles, from dancehall and dub to acid, disco and Neko Trap, each with
   its own kit, bass sound, scale and four-bar song.
@@ -18,7 +18,8 @@ drums, Paw McCatney on bass and Mick Jaguar, who sings in meows.
 - A clickable panel (1351 mouse in port 1, or a USB mouse on the C64
   Ultimate; a joystick in port 2 works as the pointer).
 - Fourteen drum sounds, a bass with slides, and meows that always land on
-  the song's scale, with Bend, Vowel and Tone for each kind of meow.
+  the song's scale, with Bend, Vowel ("uuh" to "eeh") and Tone for each
+  kind of meow.
 - Settings pages: sidechain, kit tune, bass level, wave, Meowize (the bass
   through the singer's filter), an acid squelch, Cat Size.
 - A second SID (at $D420) adds dub echoes, a harmony singer and a bass delay
@@ -30,7 +31,7 @@ drums, Paw McCatney on bass and Mick Jaguar, who sings in meows.
   load while the band plays on.
 
 Runs on a PAL Commodore 64, a C64 Ultimate / Ultimate 64 and in VICE
-(x64sc). Version 1.2.3, 2026.
+(x64sc). Version 1.2.4, 2026.
 
 ## Building
 

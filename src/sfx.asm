@@ -275,7 +275,26 @@ sx_pw   lda (sp),y
         sta pwl,x
         iny
         lda (sp),y
-        jsr pwlvl               ; the cat's Level: a thinner pulse
+        cpx #1                  ; a meow voice (1, 3, 4) with a Tone not
+        beq spwt                ; as made: the Tone's pulse width instead
+        cpx #3                  ; (seq.asm tonepw)
+        bcc spw1
+        cpx #5
+        bcs spw1
+spwt    pha
+        ldy vslot,x
+        lda ctone,y
+        cmp #8
+        beq spwn
+        asl a
+        tay
+        pla
+        lda tonepw,y
+        sta pwl,x
+        lda tonepw+1,y
+        pha
+spwn    pla
+spw1    jsr pwlvl               ; the cat's Level: a thinner pulse
         sta pwh,x
         ldy rofs
         sta $d403,y
@@ -344,7 +363,10 @@ wcut2   cpx cut2own
         ldy cut2own
         lda sptrh,y
         bne wc2no               ; the owner still plays
-        stx cut2own             ; done: this voice takes over
+        stx cut2own             ; done: this voice takes over, its filter
+        ldy sidoff+3            ; low-pass again (a meow's vowel may have
+        lda #$1f                ; changed it: wmode)
+        sta $d418,y
         lda cutoff2
 wc2own  sta cutoff2
         ldy sidmodel2
@@ -354,6 +376,21 @@ wc2own  sta cutoff2
 +       ldy sidoff+3            ; SID 2 - $d400
         sta $d416,y
 wc2no   rts
+
+; the vowel's filter mode (mfm, pitch.asm: $10 low-pass, $20 band-pass)
+; into voice X's SID, at full volume; SID 2's only while voice
+; X owns its filter (wcut2); uses Y
+wmode   lda mfm
+        ora #$0f
+        cpx #3
+        bcs +
+        sta $d418
+        rts
++       cpx cut2own
+        bne +
+        ldy sidoff+3
+        sta $d418,y
++       rts
 
 ; $D417 = A, with the resonance toned down on a 6581 (it squeals)
 wroute  sta route1               ; (Meowize: wroute1 again with the last)

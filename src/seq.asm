@@ -1052,12 +1052,26 @@ scl8    sta s4a
 ; as made, wider at the ends (Bend up to 4 times the swoop, Vowel 3 times
 ; the opening)
 bendf   .byte 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 20, 24, 28, 32
-vowf    .byte 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 22, 24
+; Vowel 0-16 (8 = as made): the cutoff vbase + (the meow's - 12) * vsweep / 8
+; through the filter mode vmode: from a closed "uuh" (a steady low cutoff)
+; through "ooh" to the meow, then wider, then band-pass: "aah" (~1 kHz) up
+; to "eeh" (~2 kHz); quieter, a band-pass keeps less of the pulse. (A 6581's
+; filter hardly goes lower than the meow's closed cutoff: there the dark end
+; is mostly Tone's pulse width.)
+vbase   .byte 6, 7, 8, 9, 10, 11, 12, 12, 12, 12, 14, 18, 22, 30, 32, 38, 44
+vsweep  .byte 0, 0, 1, 1, 2, 3, 4, 6, 8, 14, 3, 2, 2, 2, 1, 1, 1
+vmode   .byte $10, $10, $10, $10, $10, $10, $10, $10, $10, $10
+        .byte $20, $20, $20, $20, $20, $20, $20
+; Tone 0-16 (8 = as made): the cutoff * tonef / 8, and the meow's pulse
+; width tonepw (a hollow square at the dark end, a thin buzz at the bright)
+tonef   .byte 3, 3, 4, 4, 5, 6, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20
+tonepw  .word $800, $7c0, $780, $740, $700, $6c0, $680, $640, $600
+        .word $560, $4c0, $420, $380, $300, $280, $200, $180
 
 s4a      .word 0          ; scl8: A, shifted up
 s4p      .word 0          ; ...the product
 s4t      .byte 0          ; ...s4b, shifted out
-s4b      .byte 0          ; scl8's factor in eighths (bendf, vowf)
+s4b      .byte 0          ; scl8's factor in eighths (bendf, vsweep, tonef)
 cbidx    .byte 0          ; contour: the Bend index being tried
 mvow     .byte 8          ; the Vowel, Tone of the last contour (cstore keeps
 mtone    .byte 8          ; them)
